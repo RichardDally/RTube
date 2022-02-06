@@ -1,0 +1,20 @@
+{
+  "name": "rtube",
+  "version": "1.0.0",
+  "description": "",
+  "dependencies": {
+    "@videojs/http-streaming": "^2.13.1",
+    "aws-sdk": "^2.1056.0",
+    "video.js": "^7.17.0",
+    "videojs-contrib-quality-levels": "^2.1.0",
+    "videojs-hotkeys": "^0.2.27",
+    "videojs-hls-quality-selector": "^1.1.4"
+  },
+  "main": "video-player.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Richard Dally",
+  "license": "ISC"
+}
