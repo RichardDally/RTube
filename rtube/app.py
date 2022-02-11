@@ -13,9 +13,13 @@ app = Flask(__name__)
 
 
 @app.route('/')
-def index():
-    return render_template('video-player.html')
-    # return render_template('index.html')
+def hello():
+    return "OK"
+
+
+@app.route('/<string:filename>')
+def index(filename):
+    return render_template('index.html', video_filename=f"videos/{filename}.m3u8")
 
 
 # @app.route('/videos/<string:file_name>')

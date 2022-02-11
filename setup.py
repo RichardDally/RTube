@@ -15,6 +15,8 @@ setuptools.setup(
     license="MIT License",
     install_requires=requirements,
     packages=setuptools.find_packages(),
+    include_package_data=True,
+    zip_safe=False,
     author_email="r.dally@pm.me",
     long_description=long_description,
     long_description_content_type="text/markdown",
