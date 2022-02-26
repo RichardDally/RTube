@@ -14,3 +14,10 @@ Streaming platform Proof Of Concept.
 * Download and install [Git Large File Storage](https://git-lfs.github.com/)
 * Track mp4 files `$ git lfs track "*.mp4"`
 * `git add/commit/push` will upload on GitHub LFS. 
+
+### Optional Flask-S3
+* Serve your video files stored in S3 directly in Flask
+* Create `.env` beside `readme.md` and fill following parameters:
+  * `FLASKS3_BUCKET_NAME`
+  * `AWS_ACCESS_KEY_ID`
+  * `AWS_SECRET_ACCESS_KEY`
