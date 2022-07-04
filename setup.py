@@ -1,15 +1,18 @@
 import setuptools
 
+
 with open("readme.md", "r") as fh:
     long_description = fh.read()
+
 
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
+
 setuptools.setup(
     author="Richard Dally",
     name="rtube",
-    version="1.0.0",
+    version="0.0.1",
     description="Streaming platform from scratch",
     url="https://github.com/RichardDally/RTube",
     license="MIT License",
@@ -17,7 +20,6 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     zip_safe=False,
-    author_email="r.dally@pm.me",
     long_description=long_description,
     long_description_content_type="text/markdown",
     classifiers=[

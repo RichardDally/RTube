@@ -28,11 +28,11 @@ def mp4_to_hls(video_path_to_load: str):
     video = ffmpeg_streaming.input(rf"rtube/static/{video_path_to_load}.mp4")
     hls = video.hls(Formats.h264())
     # hls.auto_generate_representations()
-    hls.representations(_144p, _360p)
+    hls.representations(_480p, _720p)
     # logger.info("Encoding will start now.")
     hls.output(rf"rtube/static/videos/{video_path_to_load}.m3u8", monitor=monitor)
     # logger.info("Encoding has ended.")
 
 
-for filename in ["Gameplay", "Gameplay_2"]:
+for filename in ["Gameplay"]:
     mp4_to_hls(filename)

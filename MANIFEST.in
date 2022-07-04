@@ -1,0 +1,4 @@
+include rtube/schema.sql
+graft rtube/static
+graft rtube/templates
+global-exclude *.pyc
