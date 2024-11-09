@@ -17,13 +17,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     zip_safe=False,
-    author_email="r.dally@pm.me",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-    ],
-    python_requires='>=3.7',
+    python_requires='>=3.11',
 )
