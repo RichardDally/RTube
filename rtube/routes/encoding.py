@@ -2,6 +2,7 @@ import json
 import logging
 from pathlib import Path
 from flask import Blueprint, render_template, request, redirect, url_for, current_app, Response
+from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
 from rtube.models import db, Video, EncodingJob
@@ -19,11 +20,13 @@ def allowed_file(filename: str) -> bool:
 
 
 @encoding_bp.route('/', methods=['GET'])
+@login_required
 def upload_form():
     return render_template('encoding/upload.html')
 
 
 @encoding_bp.route('/', methods=['POST'])
+@login_required
 def upload_video():
     if 'video' not in request.files:
         return render_template('encoding/upload.html', error="No file selected")
@@ -41,32 +44,28 @@ def upload_video():
 
     description = request.form.get('description', '').strip()[:5000] or None
     language = request.form.get('language', '').strip() or None
+    visibility = request.form.get('visibility', 'public')
+    if visibility not in ('public', 'private'):
+        visibility = 'public'
     qualities = request.form.getlist('qualities')
     if not qualities:
         return render_template('encoding/upload.html', error="Select at least one quality")
 
-    # Generate unique filename
-    original_filename = secure_filename(file.filename)
-    filename_base = Path(original_filename).stem
-    filename_base = secure_filename(title) or filename_base
+    # Create video record first to get unique short_id
+    video = Video(title=title, description=description, language=language, visibility=visibility, filename="temp", owner_username=current_user.username)
+    db.session.add(video)
+    db.session.flush()  # Get the short_id without committing
+
+    # Use short_id as filename base to ensure uniqueness
+    filename_base = video.short_id
+    video.filename = filename_base
+    video.thumbnail = f"thumbnails/{filename_base}.jpg"
 
     # Save uploaded file
     upload_folder = Path(current_app.static_folder)
     input_path = upload_folder / f"{filename_base}.mp4"
-
-    # Handle duplicate filenames
-    counter = 1
-    while input_path.exists():
-        input_path = upload_folder / f"{filename_base}_{counter}.mp4"
-        filename_base = f"{filename_base}_{counter}"
-        counter += 1
-
     file.save(input_path)
 
-    # Create video record with thumbnail path
-    thumbnail_filename = f"thumbnails/{filename_base}.jpg"
-    video = Video(filename=filename_base, title=title, description=description, language=language, thumbnail=thumbnail_filename)
-    db.session.add(video)
     db.session.commit()
 
     # Create encoding job
@@ -80,7 +79,7 @@ def upload_video():
 
     # Start encoding
     output_path = Path(current_app.static_folder) / "videos" / f"{filename_base}.m3u8"
-    thumbnail_path = Path(current_app.static_folder) / thumbnail_filename
+    thumbnail_path = Path(current_app.static_folder) / video.thumbnail
     keep_original = current_app.config.get("KEEP_ORIGINAL_VIDEO", False)
     encoder_service.encode_video(job.id, input_path, output_path, qualities, delete_original=not keep_original, thumbnail_path=thumbnail_path)
 

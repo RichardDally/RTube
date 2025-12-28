@@ -36,6 +36,124 @@
                 color: #888;
                 max-width: 600px;
             }
+            .comments-section {
+                width: 1280px;
+                margin-top: 30px;
+                font-family: Arial, sans-serif;
+            }
+            .comments-title {
+                color: #fff;
+                font-size: 18px;
+                margin-bottom: 20px;
+            }
+            .comment-form {
+                margin-bottom: 30px;
+            }
+            .comment-form textarea {
+                width: 100%;
+                min-height: 80px;
+                padding: 12px;
+                border: 1px solid #444;
+                border-radius: 5px;
+                background-color: #2a2a2a;
+                color: #fff;
+                font-size: 14px;
+                resize: vertical;
+                box-sizing: border-box;
+            }
+            .comment-form textarea:focus {
+                outline: none;
+                border-color: #4CAF50;
+            }
+            .comment-form-footer {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 10px;
+            }
+            .char-counter {
+                color: #888;
+                font-size: 12px;
+            }
+            .btn-comment {
+                padding: 10px 20px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 14px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .btn-comment:hover {
+                background-color: #45a049;
+            }
+            .btn-comment:disabled {
+                background-color: #444;
+                cursor: not-allowed;
+            }
+            .comment-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            .comment-item {
+                background-color: #2a2a2a;
+                border-radius: 5px;
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            .comment-header {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+            .comment-author {
+                color: #4CAF50;
+                font-weight: bold;
+                font-size: 14px;
+            }
+            .comment-date {
+                color: #888;
+                font-size: 12px;
+            }
+            .comment-content {
+                color: #ddd;
+                font-size: 14px;
+                line-height: 1.5;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+            .no-comments {
+                color: #888;
+                font-style: italic;
+            }
+            .login-prompt {
+                color: #888;
+                font-size: 14px;
+            }
+            .login-prompt a {
+                color: #4CAF50;
+                text-decoration: none;
+            }
+            .login-prompt a:hover {
+                text-decoration: underline;
+            }
+            .flash-message {
+                padding: 10px 15px;
+                border-radius: 5px;
+                margin-bottom: 15px;
+                font-size: 14px;
+            }
+            .flash-success {
+                background-color: #4CAF50;
+                color: white;
+            }
+            .flash-error {
+                background-color: #ff4444;
+                color: white;
+            }
         </style>
         <script>
             var filename = '{{ filename }}'
@@ -57,6 +175,48 @@
             </div>
         </div>
 
+        {% if video %}
+        <div class="comments-section">
+            <h3 class="comments-title">Comments ({{ video.comments | length }})</h3>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% if current_user.is_authenticated %}
+            <form class="comment-form" method="post" action="{{ url_for('videos.post_comment', short_id=video.short_id) }}">
+                <textarea name="content" id="comment-content" placeholder="Write a comment..." maxlength="5000"></textarea>
+                <div class="comment-form-footer">
+                    <span class="char-counter"><span id="char-count">0</span> / 5000</span>
+                    <button type="submit" class="btn-comment">Post Comment</button>
+                </div>
+            </form>
+            {% else %}
+            <p class="login-prompt"><a href="{{ url_for('auth.login') }}">Log in</a> to post a comment.</p>
+            {% endif %}
+
+            {% if video.comments %}
+            <ul class="comment-list">
+                {% for comment in video.comments %}
+                <li class="comment-item">
+                    <div class="comment-header">
+                        <span class="comment-author">{{ comment.author_username }}</span>
+                        <span class="comment-date">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                    </div>
+                    <div class="comment-content">{{ comment.content }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="no-comments">No comments yet. Be the first to comment!</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <script src="{{ url_for('static', filename='node_modules/video.js/dist/video.min.js')}}"></script>
         <script src="{{ url_for('static', filename='node_modules/videojs-contrib-quality-levels/dist/videojs-contrib-quality-levels.min.js')}}"></script>
         <script src="{{ url_for('static', filename='node_modules/videojs-hls-quality-selector/dist/videojs-hls-quality-selector.min.js')}}"></script>
@@ -65,5 +225,14 @@
         <script src="{{ url_for('static', filename='node_modules/videojs-markers/dist/videojs-markers.min.js')}}"></script>
         <script src="{{ url_for('static', filename='js/plugin-test.js')}}" type="text/javascript"></script>
         <script src="{{ url_for('static', filename='js/video-player.js')}}" type="text/javascript"></script>
+        <script>
+            const commentContent = document.getElementById('comment-content');
+            const charCount = document.getElementById('char-count');
+            if (commentContent && charCount) {
+                commentContent.addEventListener('input', function() {
+                    charCount.textContent = this.value.length;
+                });
+            }
+        </script>
    </body>
 </html>

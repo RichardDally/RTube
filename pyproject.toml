@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rtube"
-version = "1.0.0"
+version = "0.1.0"
 description = "Streaming platform from scratch"
 readme = "readme.md"
 license = "MIT"
@@ -15,6 +15,8 @@ requires-python = ">=3.11"
 dependencies = [
     "Flask>=3.0.0",
     "flask-sqlalchemy>=3.0.0",
+    "flask-login>=0.6.0",
+    "argon2-cffi>=23.1.0",
     "psycopg2-binary",
     "python-ffmpeg-video-streaming==0.1.14",
 ]

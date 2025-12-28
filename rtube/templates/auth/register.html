@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>RTube - Register</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 500px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #1a1a1a;
+                color: #fff;
+                min-height: 100vh;
+            }
+            h1 {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+            .form-group {
+                margin-bottom: 20px;
+            }
+            label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: bold;
+            }
+            input[type="text"],
+            input[type="password"] {
+                width: 100%;
+                padding: 12px;
+                border: 1px solid #444;
+                border-radius: 5px;
+                background-color: #2a2a2a;
+                color: #fff;
+                box-sizing: border-box;
+                font-size: 16px;
+            }
+            input[type="text"]:focus,
+            input[type="password"]:focus {
+                outline: none;
+                border-color: #4CAF50;
+            }
+            button[type="submit"] {
+                width: 100%;
+                padding: 15px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 16px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            button[type="submit"]:hover {
+                background-color: #45a049;
+            }
+            .error {
+                background-color: #ff4444;
+                color: white;
+                padding: 10px;
+                border-radius: 5px;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+            .links {
+                text-align: center;
+                margin-top: 20px;
+            }
+            .links a {
+                color: #888;
+                text-decoration: none;
+            }
+            .links a:hover {
+                color: #fff;
+            }
+            .back-link {
+                display: block;
+                text-align: center;
+                margin-top: 30px;
+                color: #888;
+                text-decoration: none;
+            }
+            .back-link:hover {
+                color: #fff;
+            }
+            .password-requirements {
+                background-color: #2a2a2a;
+                border-radius: 5px;
+                padding: 15px;
+                margin-bottom: 20px;
+                font-size: 13px;
+            }
+            .password-requirements h3 {
+                margin-top: 0;
+                margin-bottom: 10px;
+                font-size: 14px;
+                color: #ccc;
+            }
+            .password-requirements ul {
+                margin: 0;
+                padding-left: 20px;
+                color: #888;
+            }
+            .password-requirements li {
+                margin-bottom: 5px;
+            }
+            .requirement {
+                color: #888;
+                transition: color 0.2s;
+            }
+            .requirement.valid {
+                color: #4CAF50;
+            }
+            .requirement.invalid {
+                color: #ff6666;
+            }
+            .password-strength {
+                margin-top: 8px;
+                height: 4px;
+                background-color: #444;
+                border-radius: 2px;
+                overflow: hidden;
+            }
+            .password-strength-bar {
+                height: 100%;
+                width: 0%;
+                transition: width 0.3s, background-color 0.3s;
+            }
+            .strength-weak { background-color: #ff4444; width: 25%; }
+            .strength-fair { background-color: #ffaa00; width: 50%; }
+            .strength-good { background-color: #aacc00; width: 75%; }
+            .strength-strong { background-color: #4CAF50; width: 100%; }
+        </style>
+    </head>
+    <body>
+        <div>
+            <h1>Create Account</h1>
+
+            {% if error %}
+            <div class="error">{{ error }}</div>
+            {% endif %}
+
+            <div class="password-requirements">
+                <h3>Password Requirements</h3>
+                <ul>
+                    <li id="req-length" class="requirement">At least 12 characters</li>
+                    <li id="req-upper" class="requirement">At least one uppercase letter (A-Z)</li>
+                    <li id="req-lower" class="requirement">At least one lowercase letter (a-z)</li>
+                    <li id="req-digit" class="requirement">At least one digit (0-9)</li>
+                    <li id="req-special" class="requirement">At least one special character (!@#$%...)</li>
+                    <li id="req-pattern" class="requirement">No common patterns or sequences</li>
+                </ul>
+            </div>
+
+            <form method="post" id="register-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required autocomplete="username"
+                           value="{{ username or '' }}" placeholder="3-30 characters, letters, numbers, underscores">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required autocomplete="new-password">
+                    <div class="password-strength">
+                        <div class="password-strength-bar" id="strength-bar"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password_confirm">Confirm Password</label>
+                    <input type="password" id="password_confirm" name="password_confirm" required autocomplete="new-password">
+                </div>
+
+                <button type="submit">Create Account</button>
+            </form>
+
+            <div class="links">
+                <p>Already have an account? <a href="{{ url_for('auth.login') }}">Login</a></p>
+            </div>
+
+            <a href="{{ url_for('videos.index') }}" class="back-link">&larr; Back to videos</a>
+        </div>
+
+        <script>
+            const password = document.getElementById('password');
+            const requirements = {
+                length: document.getElementById('req-length'),
+                upper: document.getElementById('req-upper'),
+                lower: document.getElementById('req-lower'),
+                digit: document.getElementById('req-digit'),
+                special: document.getElementById('req-special'),
+                pattern: document.getElementById('req-pattern')
+            };
+            const strengthBar = document.getElementById('strength-bar');
+
+            const commonPatterns = ['123456', 'password', 'qwerty', 'abc123'];
+            const sequences = ['abcdefghijklmnopqrstuvwxyz', '0123456789'];
+
+            function hasSequence(pwd) {
+                const lower = pwd.toLowerCase();
+                for (const seq of sequences) {
+                    for (let i = 0; i < seq.length - 3; i++) {
+                        if (lower.includes(seq.substring(i, i + 4))) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            function hasCommonPattern(pwd) {
+                const lower = pwd.toLowerCase();
+                for (const pattern of commonPatterns) {
+                    if (lower.includes(pattern)) {
+                        return true;
+                    }
+                }
+                // Check for repeated characters
+                if (/(.)\1{3,}/.test(pwd)) {
+                    return true;
+                }
+                return false;
+            }
+
+            function validatePassword() {
+                const pwd = password.value;
+                let score = 0;
+
+                // Check length
+                const hasLength = pwd.length >= 12;
+                requirements.length.className = 'requirement ' + (hasLength ? 'valid' : (pwd.length > 0 ? 'invalid' : ''));
+                if (hasLength) score++;
+
+                // Check uppercase
+                const hasUpper = /[A-Z]/.test(pwd);
+                requirements.upper.className = 'requirement ' + (hasUpper ? 'valid' : (pwd.length > 0 ? 'invalid' : ''));
+                if (hasUpper) score++;
+
+                // Check lowercase
+                const hasLower = /[a-z]/.test(pwd);
+                requirements.lower.className = 'requirement ' + (hasLower ? 'valid' : (pwd.length > 0 ? 'invalid' : ''));
+                if (hasLower) score++;
+
+                // Check digit
+                const hasDigit = /\d/.test(pwd);
+                requirements.digit.className = 'requirement ' + (hasDigit ? 'valid' : (pwd.length > 0 ? 'invalid' : ''));
+                if (hasDigit) score++;
+
+                // Check special character
+                const hasSpecial = /[!@#$%^&*(),.?":{}|<>\-_=+\[\]\\;'`~]/.test(pwd);
+                requirements.special.className = 'requirement ' + (hasSpecial ? 'valid' : (pwd.length > 0 ? 'invalid' : ''));
+                if (hasSpecial) score++;
+
+                // Check patterns
+                const hasPattern = hasCommonPattern(pwd) || hasSequence(pwd);
+                requirements.pattern.className = 'requirement ' + (!hasPattern && pwd.length > 0 ? 'valid' : (hasPattern ? 'invalid' : ''));
+                if (!hasPattern && pwd.length > 0) score++;
+
+                // Update strength bar
+                strengthBar.className = 'password-strength-bar';
+                if (pwd.length > 0) {
+                    if (score <= 2) {
+                        strengthBar.classList.add('strength-weak');
+                    } else if (score <= 3) {
+                        strengthBar.classList.add('strength-fair');
+                    } else if (score <= 5) {
+                        strengthBar.classList.add('strength-good');
+                    } else {
+                        strengthBar.classList.add('strength-strong');
+                    }
+                }
+            }
+
+            password.addEventListener('input', validatePassword);
+        </script>
+    </body>
+</html>

@@ -46,7 +46,35 @@ Then open http://127.0.0.1:5000 in your browser.
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `RTUBE_DATABASE_URL` | Database connection URL (PostgreSQL recommended for production) | `sqlite:///rtube.db` |
+| `RTUBE_AUTH_DATABASE_URL` | Authentication database URL (separate for security) | `sqlite:///rtube_auth.db` |
+| `RTUBE_SECRET_KEY` | Secret key for session security (generate a strong random key for production) | Auto-generated |
+| `RTUBE_HTTPS` | Enable secure session cookies (`true`, `1`, or `yes` when using HTTPS) | `false` |
 | `RTUBE_KEEP_ORIGINAL_VIDEO` | Keep original MP4 file after encoding (`true`, `1`, or `yes` to enable) | `false` |
+
+## Authentication
+
+RTube includes a built-in authentication system with three user roles:
+
+- **Anonymous**: Can view videos but cannot upload
+- **Uploader**: Can view and upload videos
+- **Admin**: Can view and upload videos with additional privileges
+
+### Default Admin Account
+
+On first startup, a default admin account is created:
+- **Username**: `admin`
+- **Password**: `admin`
+
+**Important**: Change this password immediately in production!
+
+### Password Requirements
+
+- Minimum 12 characters
+- At least one uppercase letter (A-Z)
+- At least one lowercase letter (a-z)
+- At least one digit (0-9)
+- At least one special character
+- No common patterns or sequences
 
 ### Git LFS side note
 * Download and install [Git Large File Storage](https://git-lfs.github.com/)

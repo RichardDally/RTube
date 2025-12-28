@@ -72,6 +72,13 @@
                 font-size: 11px;
                 text-transform: uppercase;
             }
+            .private-badge {
+                background-color: #8B4513;
+                color: #fff;
+                padding: 2px 8px;
+                border-radius: 3px;
+                font-size: 11px;
+            }
             .video-description {
                 color: #888;
                 font-size: 13px;
@@ -80,6 +87,12 @@
                 -webkit-line-clamp: 2;
                 -webkit-box-orient: vertical;
                 overflow: hidden;
+            }
+            .video-owner {
+                color: #888;
+                font-size: 12px;
+                flex-shrink: 0;
+                align-self: center;
             }
             .empty-message {
                 color: #888;
@@ -105,12 +118,65 @@
             .btn-upload:hover {
                 background-color: #45a049;
             }
+            .header-actions {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+            .auth-links {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 14px;
+            }
+            .auth-links a {
+                color: #888;
+                text-decoration: none;
+            }
+            .auth-links a:hover {
+                color: #fff;
+            }
+            .username {
+                color: #4CAF50;
+            }
+            .btn-login {
+                padding: 8px 16px;
+                background-color: #444;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                transition: background-color 0.2s;
+            }
+            .btn-login:hover {
+                background-color: #555;
+            }
+            footer {
+                margin-top: 50px;
+                padding-top: 20px;
+                border-top: 1px solid #333;
+                text-align: center;
+                color: #666;
+                font-size: 12px;
+            }
         </style>
     </head>
     <body>
         <div class="header">
             <h1>RTube</h1>
-            <a href="/encode" class="btn-upload">+ Encode a video</a>
+            <div class="header-actions">
+                <div class="auth-links">
+                    {% if current_user.is_authenticated %}
+                    <span class="username">{{ current_user.username }}</span>
+                    <a href="{{ url_for('auth.logout') }}">Logout</a>
+                    {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="btn-login">Login</a>
+                    <a href="{{ url_for('auth.register') }}">Register</a>
+                    {% endif %}
+                </div>
+                {% if current_user.is_authenticated %}
+                <a href="/encode" class="btn-upload">+ Encode a video</a>
+                {% endif %}
+            </div>
         </div>
         {% if videos %}
         <ul class="video-list">
@@ -129,11 +195,17 @@
                             {% if video.language %}
                             <span class="language-badge">{{ video.language }}</span>
                             {% endif %}
+                            {% if video.visibility == 'private' %}
+                            <span class="private-badge">Private</span>
+                            {% endif %}
                         </div>
                         {% if video.description %}
                         <span class="video-description">{{ video.description }}</span>
                         {% endif %}
                     </div>
+                    {% if video.owner_username %}
+                    <span class="video-owner">{{ video.owner_username }}</span>
+                    {% endif %}
                 </a>
             </li>
             {% endfor %}
@@ -141,5 +213,6 @@
         {% else %}
         <p class="empty-message">No videos available.</p>
         {% endif %}
+        <footer>RTube v{{ rtube_version }}</footer>
     </body>
 </html>
