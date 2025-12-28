@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>RTube - Encoding Jobs</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #1a1a1a;
+                color: #fff;
+            }
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 30px;
+            }
+            .header h1 {
+                margin: 0;
+            }
+            .btn {
+                padding: 10px 20px;
+                text-decoration: none;
+                border-radius: 5px;
+                transition: background-color 0.2s;
+            }
+            .btn-primary {
+                background-color: #4CAF50;
+                color: white;
+            }
+            .btn-primary:hover {
+                background-color: #45a049;
+            }
+            .btn-secondary {
+                background-color: #444;
+                color: white;
+            }
+            .btn-secondary:hover {
+                background-color: #555;
+            }
+            .nav-links {
+                display: flex;
+                gap: 10px;
+            }
+            .jobs-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            .jobs-table th,
+            .jobs-table td {
+                padding: 15px;
+                text-align: left;
+                border-bottom: 1px solid #333;
+            }
+            .jobs-table th {
+                background-color: #2a2a2a;
+                font-weight: bold;
+            }
+            .jobs-table tr:hover {
+                background-color: #2a2a2a;
+            }
+            .status-badge {
+                display: inline-block;
+                padding: 5px 10px;
+                border-radius: 15px;
+                font-size: 12px;
+                text-transform: uppercase;
+            }
+            .status-pending {
+                background-color: #666;
+            }
+            .status-encoding {
+                background-color: #2196F3;
+            }
+            .status-completed {
+                background-color: #4CAF50;
+            }
+            .status-failed {
+                background-color: #f44336;
+            }
+            .progress-bar-mini {
+                width: 100px;
+                height: 8px;
+                background-color: #444;
+                border-radius: 4px;
+                overflow: hidden;
+                display: inline-block;
+                vertical-align: middle;
+                margin-right: 8px;
+            }
+            .progress-bar-mini-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #4CAF50, #8BC34A);
+                transition: width 0.3s ease;
+            }
+            .quality-badge {
+                display: inline-block;
+                padding: 3px 6px;
+                margin: 1px;
+                background-color: #444;
+                border-radius: 3px;
+                font-size: 11px;
+            }
+            .empty-message {
+                color: #888;
+                font-style: italic;
+                text-align: center;
+                padding: 40px;
+            }
+            a.job-link {
+                color: #4CAF50;
+                text-decoration: none;
+            }
+            a.job-link:hover {
+                text-decoration: underline;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Encoding Jobs</h1>
+            <div class="nav-links">
+                <a href="/" class="btn btn-secondary">Videos</a>
+                <a href="/encode" class="btn btn-primary">+ Encode a video</a>
+            </div>
+        </div>
+
+        {% if jobs %}
+        <table class="jobs-table">
+            <thead>
+                <tr>
+                    <th>Video</th>
+                    <th>Status</th>
+                    <th>Progress</th>
+                    <th>Qualities</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr data-job-id="{{ job.id }}" data-job-status="{{ job.status }}">
+                    <td>
+                        <a href="{{ url_for('encoding.encoding_status', job_id=job.id) }}" class="job-link">
+                            {{ job.video.title or job.video.filename }}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ job.status }}" id="status-{{ job.id }}">{{ job.status }}</span>
+                    </td>
+                    <td>
+                        <div class="progress-bar-mini">
+                            <div class="progress-bar-mini-fill" id="progress-bar-{{ job.id }}" style="width: {{ job.progress }}%"></div>
+                        </div>
+                        <span id="progress-text-{{ job.id }}">{{ job.progress }}</span>%
+                    </td>
+                    <td>
+                        {% for quality in job.qualities.split(',') %}
+                        <span class="quality-badge">{{ quality }}</span>
+                        {% endfor %}
+                    </td>
+                    <td>{{ job.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-message">No encoding jobs yet.</p>
+        {% endif %}
+
+        <script>
+            // Find all jobs that are currently encoding or pending
+            const activeJobs = document.querySelectorAll('tr[data-job-status="encoding"], tr[data-job-status="pending"]');
+            const eventSources = {};
+
+            activeJobs.forEach(row => {
+                const jobId = row.dataset.jobId;
+                const statusBadge = document.getElementById('status-' + jobId);
+                const progressBar = document.getElementById('progress-bar-' + jobId);
+                const progressText = document.getElementById('progress-text-' + jobId);
+
+                const eventSource = new EventSource('/encode/progress/' + jobId);
+                eventSources[jobId] = eventSource;
+
+                eventSource.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+
+                    // Update progress bar
+                    progressBar.style.width = data.progress + '%';
+                    progressText.textContent = data.progress;
+
+                    // Update status badge
+                    statusBadge.className = 'status-badge status-' + data.status;
+                    statusBadge.textContent = data.status;
+
+                    // Update row data attribute
+                    row.dataset.jobStatus = data.status;
+
+                    // Close connection if job is done
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        eventSource.close();
+                        delete eventSources[jobId];
+                    }
+                };
+
+                eventSource.onerror = function() {
+                    eventSource.close();
+                    delete eventSources[jobId];
+                };
+            });
+
+            // Clean up on page unload
+            window.addEventListener('beforeunload', function() {
+                Object.values(eventSources).forEach(es => es.close());
+            });
+        </script>
+    </body>
+</html>

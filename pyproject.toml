@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rtube"
+version = "1.0.0"
+description = "Streaming platform from scratch"
+readme = "readme.md"
+license = "MIT"
+authors = [
+    { name = "Richard Dally" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "Flask>=3.0.0",
+    "flask-sqlalchemy>=3.0.0",
+    "psycopg2-binary",
+    "python-ffmpeg-video-streaming==0.1.14",
+]
+
+[project.urls]
+Homepage = "https://github.com/RichardDally/RTube"
+Repository = "https://github.com/RichardDally/RTube"
+
+[tool.setuptools.packages.find]
+where = ["."]

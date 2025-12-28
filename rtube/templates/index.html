@@ -6,6 +6,37 @@
         <link href="{{ url_for('static', filename='node_modules/video.js/dist/video-js.css')}}" rel="stylesheet">
         <link href="{{ url_for('static', filename='node_modules/videojs-markers/dist/videojs.markers.css')}}" rel="stylesheet">
 
+        <style>
+            body {
+                margin: 0;
+                background-color: #1a1a1a;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+            }
+            .video-container {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .video-meta {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                margin-top: 10px;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+            }
+            .view-count {
+                color: #aaa;
+            }
+            .video-description {
+                color: #888;
+                max-width: 600px;
+            }
+        </style>
         <script>
             var filename = '{{ filename }}'
             var mymarkers = JSON.parse('{{ markers | tojson }}');
@@ -13,10 +44,18 @@
     </head>
 
     <body>
-        <video-js id="RPlayer" class="vjs-default-skin" controls preload="auto" width="1280" height="720">
-            <source src="{{ url_for('static', filename=video_path_to_load)}}" type="application/x-mpegURL">
-            Your browser doesn't support video tag.
-        </video-js>
+        <div class="video-container">
+            <video-js id="RPlayer" class="vjs-default-skin" controls preload="auto" width="1280" height="720">
+                <source src="{{ url_for('static', filename=video_path_to_load)}}" type="application/x-mpegURL">
+                Your browser doesn't support video tag.
+            </video-js>
+            <div class="video-meta">
+                <span class="view-count">{{ view_count }} view{{ 's' if view_count > 1 else '' }}</span>
+                {% if description %}
+                <span class="video-description">{{ description }}</span>
+                {% endif %}
+            </div>
+        </div>
 
         <script src="{{ url_for('static', filename='node_modules/video.js/dist/video.min.js')}}"></script>
         <script src="{{ url_for('static', filename='node_modules/videojs-contrib-quality-levels/dist/videojs-contrib-quality-levels.min.js')}}"></script>

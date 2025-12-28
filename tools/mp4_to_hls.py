@@ -1,7 +1,9 @@
 import sys
 import datetime
 import ffmpeg_streaming
-from loguru import logger
+import logging
+
+logger = logging.getLogger(__name__)
 from ffmpeg_streaming import Formats, Representation, Size, Bitrate
 
 
@@ -28,11 +30,12 @@ def mp4_to_hls(video_path_to_load: str):
     video = ffmpeg_streaming.input(rf"rtube/static/{video_path_to_load}.mp4")
     hls = video.hls(Formats.h264())
     # hls.auto_generate_representations()
-    hls.representations(_144p, _360p)
-    # logger.info("Encoding will start now.")
+    hls.representations(_2k)
+    # hls.representations(_144p, _360p, _480p, _720p, _1080p, _2k)
+    logger.info("Encoding will start now.")
     hls.output(rf"rtube/static/videos/{video_path_to_load}.m3u8", monitor=monitor)
-    # logger.info("Encoding has ended.")
+    logger.info("Encoding has ended.")
 
 
-for filename in ["Gameplay", "Gameplay_2"]:
+for filename in ["hd2"]:
     mp4_to_hls(filename)

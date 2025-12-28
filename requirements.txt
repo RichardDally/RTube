@@ -1,6 +1,0 @@
-Flask==2.0.2
-python-ffmpeg-video-streaming==0.1.14
-loguru>=0.6.0
-boto3
-flask-s3
-python-dotenv

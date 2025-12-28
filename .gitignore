@@ -147,9 +147,6 @@ dmypy.json
 #                                         | |
 #                                         |_|
 
-# npm
-package-lock.json
-
 # Logs
 logs
 npm-debug.log*
@@ -287,3 +284,9 @@ dist
 .idea
 *.m3u8
 *.ts
+*.mp4
+*.mkv
+*.jpg
+*.png
+.claude
+nul
