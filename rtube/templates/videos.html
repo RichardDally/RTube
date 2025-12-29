@@ -174,7 +174,7 @@
                     {% endif %}
                 </div>
                 {% if current_user.is_authenticated %}
-                <a href="/encode" class="btn-upload">+ Encode a video</a>
+                <a href="/encode" class="btn-upload">Encode a video</a>
                 {% endif %}
             </div>
         </div>
@@ -182,7 +182,7 @@
         <ul class="video-list">
             {% for video in videos %}
             <li>
-                <a href="/watch/{{ video.short_id }}">
+                <a href="/watch?v={{ video.short_id }}">
                     {% if video.thumbnail %}
                     <img src="{{ url_for('static', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
                     {% else %}

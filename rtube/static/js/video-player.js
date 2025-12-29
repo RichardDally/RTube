@@ -1,5 +1,5 @@
 var player = videojs("RPlayer", {
-    autoplay: "muted",
+    autoplay: false,
     controls: true,
     responsive: true,
     loop: false,
@@ -15,6 +15,15 @@ var player = videojs("RPlayer", {
 
 player.test();
 player.hlsQualitySelector({ displayCurrentQuality: true });
+
+// Seek to start time if specified (e.g., ?t=90 in URL)
+if (typeof startTime !== 'undefined' && startTime > 0) {
+    player.ready(function() {
+        player.one('loadedmetadata', function() {
+            player.currentTime(startTime);
+        });
+    });
+}
 
 player.markers({
    markerTip:{

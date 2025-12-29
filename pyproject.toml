@@ -27,3 +27,10 @@ Repository = "https://github.com/RichardDally/RTube"
 
 [tool.setuptools.packages.find]
 where = ["."]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-dotenv>=0.5.2",
+    "typer>=0.9.0",
+]

@@ -16,6 +16,23 @@
                 align-items: center;
                 min-height: 100vh;
             }
+            .header {
+                position: fixed;
+                top: 0;
+                left: 0;
+                padding: 15px 20px;
+                z-index: 1000;
+            }
+            .header a {
+                color: #fff;
+                text-decoration: none;
+                font-family: Arial, sans-serif;
+                font-size: 24px;
+                font-weight: bold;
+            }
+            .header a:hover {
+                color: #4CAF50;
+            }
             .video-container {
                 display: flex;
                 flex-direction: column;
@@ -118,12 +135,96 @@
                 color: #888;
                 font-size: 12px;
             }
+            .comment-actions {
+                margin-left: auto;
+            }
+            .btn-delete {
+                background: none;
+                border: none;
+                color: #888;
+                font-size: 12px;
+                cursor: pointer;
+                padding: 2px 8px;
+            }
+            .btn-delete:hover {
+                color: #ff4444;
+            }
+            .btn-edit {
+                background: none;
+                border: none;
+                color: #888;
+                font-size: 12px;
+                cursor: pointer;
+                padding: 2px 8px;
+            }
+            .btn-edit:hover {
+                color: #4CAF50;
+            }
+            .edit-form {
+                display: none;
+                margin-top: 10px;
+            }
+            .edit-form.active {
+                display: block;
+            }
+            .edit-form textarea {
+                width: 100%;
+                min-height: 60px;
+                padding: 10px;
+                border: 1px solid #444;
+                border-radius: 5px;
+                background-color: #333;
+                color: #fff;
+                font-size: 14px;
+                resize: vertical;
+                box-sizing: border-box;
+            }
+            .edit-form textarea:focus {
+                outline: none;
+                border-color: #4CAF50;
+            }
+            .edit-form-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 8px;
+            }
+            .btn-save {
+                padding: 6px 12px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+                cursor: pointer;
+            }
+            .btn-save:hover {
+                background-color: #45a049;
+            }
+            .btn-cancel {
+                padding: 6px 12px;
+                background-color: #444;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+                cursor: pointer;
+            }
+            .btn-cancel:hover {
+                background-color: #555;
+            }
             .comment-content {
                 color: #ddd;
                 font-size: 14px;
                 line-height: 1.5;
                 white-space: pre-wrap;
                 word-wrap: break-word;
+            }
+            .comment-content a {
+                color: #4CAF50;
+                text-decoration: none;
+            }
+            .comment-content a:hover {
+                text-decoration: underline;
             }
             .no-comments {
                 color: #888;
@@ -158,10 +259,14 @@
         <script>
             var filename = '{{ filename }}'
             var mymarkers = JSON.parse('{{ markers | tojson }}');
+            var startTime = {{ start_time | default(0) }};
         </script>
     </head>
 
     <body>
+        <div class="header">
+            <a href="/">RTube</a>
+        </div>
         <div class="video-container">
             <video-js id="RPlayer" class="vjs-default-skin" controls preload="auto" width="1280" height="720">
                 <source src="{{ url_for('static', filename=video_path_to_load)}}" type="application/x-mpegURL">
@@ -188,7 +293,7 @@
             {% endwith %}
 
             {% if current_user.is_authenticated %}
-            <form class="comment-form" method="post" action="{{ url_for('videos.post_comment', short_id=video.short_id) }}">
+            <form class="comment-form" method="post" action="{{ url_for('videos.post_comment', v=video.short_id) }}">
                 <textarea name="content" id="comment-content" placeholder="Write a comment..." maxlength="5000"></textarea>
                 <div class="comment-form-footer">
                     <span class="char-counter"><span id="char-count">0</span> / 5000</span>
@@ -202,12 +307,38 @@
             {% if video.comments %}
             <ul class="comment-list">
                 {% for comment in video.comments %}
-                <li class="comment-item">
+                <li class="comment-item" id="comment-{{ comment.id }}">
                     <div class="comment-header">
                         <span class="comment-author">{{ comment.author_username }}</span>
                         <span class="comment-date">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        {% if current_user.is_authenticated and comment.author_username == current_user.username %}
+                        <div class="comment-actions">
+                            <button type="button" class="btn-edit" onclick="toggleEditForm({{ comment.id }})">Edit</button>
+                            <form method="post" action="{{ url_for('videos.delete_comment', v=video.short_id) }}" style="display: inline;">
+                                <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                                <button type="submit" class="btn-delete" onclick="return confirm('Delete this comment?')">Delete</button>
+                            </form>
+                        </div>
+                        {% elif current_user.is_authenticated and current_user.is_admin() %}
+                        <div class="comment-actions">
+                            <form method="post" action="{{ url_for('videos.delete_comment', v=video.short_id) }}" style="display: inline;">
+                                <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                                <button type="submit" class="btn-delete" onclick="return confirm('Delete this comment?')">Delete</button>
+                            </form>
+                        </div>
+                        {% endif %}
                     </div>
-                    <div class="comment-content">{{ comment.content }}</div>
+                    <div class="comment-content" id="comment-content-{{ comment.id }}">{{ comment.content | urlize }}</div>
+                    {% if current_user.is_authenticated and comment.author_username == current_user.username %}
+                    <form class="edit-form" id="edit-form-{{ comment.id }}" method="post" action="{{ url_for('videos.edit_comment', v=video.short_id) }}">
+                        <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                        <textarea name="content" maxlength="5000">{{ comment.content }}</textarea>
+                        <div class="edit-form-actions">
+                            <button type="submit" class="btn-save">Save</button>
+                            <button type="button" class="btn-cancel" onclick="toggleEditForm({{ comment.id }})">Cancel</button>
+                        </div>
+                    </form>
+                    {% endif %}
                 </li>
                 {% endfor %}
             </ul>
@@ -232,6 +363,15 @@
                 commentContent.addEventListener('input', function() {
                     charCount.textContent = this.value.length;
                 });
+            }
+
+            function toggleEditForm(commentId) {
+                const editForm = document.getElementById('edit-form-' + commentId);
+                const commentContent = document.getElementById('comment-content-' + commentId);
+                if (editForm && commentContent) {
+                    editForm.classList.toggle('active');
+                    commentContent.style.display = editForm.classList.contains('active') ? 'none' : 'block';
+                }
             }
         </script>
    </body>
