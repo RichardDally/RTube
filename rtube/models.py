@@ -78,3 +78,18 @@ class Comment(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     video = db.relationship("Video", backref=db.backref("comments", lazy=True, order_by="Comment.created_at.desc()"))
+
+
+class Favorite(db.Model):
+    __tablename__ = "favorites"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), nullable=False)
+    video_id = db.Column(db.Integer, db.ForeignKey("videos.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    video = db.relationship("Video", backref=db.backref("favorites", lazy=True))
+
+    __table_args__ = (
+        db.UniqueConstraint('username', 'video_id', name='unique_user_video_favorite'),
+    )

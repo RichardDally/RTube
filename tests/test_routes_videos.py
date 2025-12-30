@@ -2,7 +2,7 @@
 Tests for video routes.
 """
 import pytest
-from rtube.models import db, Video, Comment
+from rtube.models import db, Video, Comment, Favorite
 
 
 class TestIndexRoute:
@@ -695,3 +695,218 @@ class TestEncodingRoutes:
         """Test encoding jobs list page loads."""
         response = client.get('/encode/status/')
         assert response.status_code == 200
+
+
+class TestFavoriteRoutes:
+    """Tests for favorite functionality."""
+
+    def test_add_favorite_requires_auth(self, client, sample_video):
+        """Test that adding a favorite requires authentication."""
+        response = client.post(
+            f'/watch/favorite?v={sample_video["short_id"]}',
+            follow_redirects=False
+        )
+        assert response.status_code == 302
+        assert '/auth/login' in response.location
+
+    def test_add_favorite_success(self, authenticated_client, sample_video, app, sample_user):
+        """Test adding a video to favorites."""
+        response = authenticated_client.post(
+            f'/watch/favorite?v={sample_video["short_id"]}',
+            follow_redirects=True
+        )
+        assert response.status_code == 200
+        assert b'added to favorites' in response.data
+
+        # Verify favorite was created
+        with app.app_context():
+            favorite = Favorite.query.filter_by(
+                username=sample_user['username'],
+                video_id=sample_video['id']
+            ).first()
+            assert favorite is not None
+
+    def test_add_favorite_already_favorited(self, authenticated_client, sample_video, app, sample_user):
+        """Test adding a video that's already in favorites."""
+        # Add favorite first
+        with app.app_context():
+            favorite = Favorite(
+                username=sample_user['username'],
+                video_id=sample_video['id']
+            )
+            db.session.add(favorite)
+            db.session.commit()
+
+        response = authenticated_client.post(
+            f'/watch/favorite?v={sample_video["short_id"]}',
+            follow_redirects=True
+        )
+        assert response.status_code == 200
+        assert b'already in your favorites' in response.data
+
+    def test_add_favorite_nonexistent_video(self, authenticated_client):
+        """Test adding nonexistent video to favorites."""
+        response = authenticated_client.post('/watch/favorite?v=nonexistent123')
+        assert response.status_code == 404
+
+    def test_add_favorite_missing_video_id(self, authenticated_client):
+        """Test adding favorite without video ID."""
+        response = authenticated_client.post('/watch/favorite')
+        assert response.status_code == 404
+
+    def test_remove_favorite_requires_auth(self, client, sample_video):
+        """Test that removing a favorite requires authentication."""
+        response = client.post(
+            f'/watch/unfavorite?v={sample_video["short_id"]}',
+            follow_redirects=False
+        )
+        assert response.status_code == 302
+        assert '/auth/login' in response.location
+
+    def test_remove_favorite_success(self, authenticated_client, sample_video, app, sample_user):
+        """Test removing a video from favorites."""
+        # Add favorite first
+        with app.app_context():
+            favorite = Favorite(
+                username=sample_user['username'],
+                video_id=sample_video['id']
+            )
+            db.session.add(favorite)
+            db.session.commit()
+
+        response = authenticated_client.post(
+            f'/watch/unfavorite?v={sample_video["short_id"]}',
+            follow_redirects=True
+        )
+        assert response.status_code == 200
+        assert b'removed from favorites' in response.data
+
+        # Verify favorite was deleted
+        with app.app_context():
+            favorite = Favorite.query.filter_by(
+                username=sample_user['username'],
+                video_id=sample_video['id']
+            ).first()
+            assert favorite is None
+
+    def test_remove_favorite_not_in_favorites(self, authenticated_client, sample_video):
+        """Test removing a video that's not in favorites."""
+        response = authenticated_client.post(
+            f'/watch/unfavorite?v={sample_video["short_id"]}',
+            follow_redirects=True
+        )
+        assert response.status_code == 200
+        assert b'was not in your favorites' in response.data
+
+    def test_remove_favorite_nonexistent_video(self, authenticated_client):
+        """Test removing nonexistent video from favorites."""
+        response = authenticated_client.post('/watch/unfavorite?v=nonexistent123')
+        assert response.status_code == 404
+
+    def test_favorite_button_visible_when_authenticated(self, authenticated_client, sample_video, app):
+        """Test that favorite button is visible to authenticated users."""
+        import os
+        # Create m3u8 file for the video
+        videos_path = os.path.join(app.static_folder, 'videos')
+        os.makedirs(videos_path, exist_ok=True)
+        m3u8_path = os.path.join(videos_path, f'{sample_video["filename"]}.m3u8')
+        with open(m3u8_path, 'w') as f:
+            f.write('#EXTM3U\n#EXT-X-ENDLIST\n')
+
+        response = authenticated_client.get(f'/watch?v={sample_video["short_id"]}')
+        assert response.status_code == 200
+        assert b'Add to Favorites' in response.data
+
+        # Cleanup
+        if os.path.exists(m3u8_path):
+            os.remove(m3u8_path)
+
+    def test_favorite_button_hidden_when_unauthenticated(self, client, sample_video, app):
+        """Test that favorite button is hidden from unauthenticated users."""
+        import os
+        # Create m3u8 file for the video
+        videos_path = os.path.join(app.static_folder, 'videos')
+        os.makedirs(videos_path, exist_ok=True)
+        m3u8_path = os.path.join(videos_path, f'{sample_video["filename"]}.m3u8')
+        with open(m3u8_path, 'w') as f:
+            f.write('#EXTM3U\n#EXT-X-ENDLIST\n')
+
+        response = client.get(f'/watch?v={sample_video["short_id"]}')
+        assert response.status_code == 200
+        assert b'Add to Favorites' not in response.data
+        assert b'Remove from Favorites' not in response.data
+
+        # Cleanup
+        if os.path.exists(m3u8_path):
+            os.remove(m3u8_path)
+
+    def test_remove_favorite_button_when_favorited(self, authenticated_client, sample_video, app, sample_user):
+        """Test that 'Remove from Favorites' button shows when video is favorited."""
+        import os
+        # Add favorite
+        with app.app_context():
+            favorite = Favorite(
+                username=sample_user['username'],
+                video_id=sample_video['id']
+            )
+            db.session.add(favorite)
+            db.session.commit()
+
+        # Create m3u8 file for the video
+        videos_path = os.path.join(app.static_folder, 'videos')
+        os.makedirs(videos_path, exist_ok=True)
+        m3u8_path = os.path.join(videos_path, f'{sample_video["filename"]}.m3u8')
+        with open(m3u8_path, 'w') as f:
+            f.write('#EXTM3U\n#EXT-X-ENDLIST\n')
+
+        response = authenticated_client.get(f'/watch?v={sample_video["short_id"]}')
+        assert response.status_code == 200
+        assert b'Remove from Favorites' in response.data
+
+        # Cleanup
+        if os.path.exists(m3u8_path):
+            os.remove(m3u8_path)
+
+    def test_favorites_shown_in_own_profile(self, authenticated_client, sample_video, app, sample_user):
+        """Test that favorites are shown in the user's own profile."""
+        # Add favorite
+        with app.app_context():
+            favorite = Favorite(
+                username=sample_user['username'],
+                video_id=sample_video['id']
+            )
+            db.session.add(favorite)
+            db.session.commit()
+
+        response = authenticated_client.get('/auth/profile')
+        assert response.status_code == 200
+        assert b'Favorites' in response.data
+        assert sample_video['title'].encode() in response.data
+
+    def test_favorites_hidden_in_other_profile(self, authenticated_client, app):
+        """Test that favorites are not shown in other users' profiles."""
+        from rtube.models_auth import User
+        # Create another user with a favorite
+        with app.app_context():
+            other_user = User(username='otheruser_fav')
+            other_user.set_password('OtherPassword123!')
+            db.session.add(other_user)
+
+            video = Video(
+                title="Other's Video",
+                filename="others_video_fav"
+            )
+            db.session.add(video)
+            db.session.commit()
+
+            favorite = Favorite(
+                username='otheruser_fav',
+                video_id=video.id
+            )
+            db.session.add(favorite)
+            db.session.commit()
+
+        response = authenticated_client.get('/auth/profile/otheruser_fav')
+        assert response.status_code == 200
+        # Favorites section should not be visible in other users' profiles
+        assert b'Favorites' not in response.data

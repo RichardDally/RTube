@@ -301,6 +301,26 @@
             .btn-share.copied {
                 background-color: #4CAF50;
             }
+            .btn-favorite {
+                padding: 8px 16px;
+                background-color: #444;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 13px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .btn-favorite:hover {
+                background-color: #555;
+            }
+            .btn-favorite.is-favorite {
+                background-color: #FFD700;
+                color: #000;
+            }
+            .btn-favorite.is-favorite:hover {
+                background-color: #FFC000;
+            }
         </style>
         <script>
             var filename = '{{ filename }}'
@@ -319,11 +339,25 @@
                 Your browser doesn't support video tag.
             </video-js>
             <div class="video-meta">
+                {% if video and video.owner_username %}
+                <span class="video-author">by <a href="{{ url_for('auth.user_profile', username=video.owner_username) }}">{{ video.owner_username }}</a></span>
+                {% endif %}
                 <span class="view-count">{{ view_count }} view{{ 's' if view_count > 1 else '' }}</span>
                 {% if description %}
                 <span class="video-description">{{ description }}</span>
                 {% endif %}
                 <button type="button" class="btn-share" onclick="shareVideo(this)">Share</button>
+                {% if current_user.is_authenticated and video %}
+                {% if is_favorite %}
+                <form method="post" action="{{ url_for('videos.remove_favorite', v=video.short_id) }}" style="display: inline;">
+                    <button type="submit" class="btn-favorite is-favorite">Remove from Favorites</button>
+                </form>
+                {% else %}
+                <form method="post" action="{{ url_for('videos.add_favorite', v=video.short_id) }}" style="display: inline;">
+                    <button type="submit" class="btn-favorite">Add to Favorites</button>
+                </form>
+                {% endif %}
+                {% endif %}
             </div>
             {% if current_user.is_authenticated and video and (current_user.is_admin() or video.owner_username == current_user.username) %}
             <div class="video-actions">

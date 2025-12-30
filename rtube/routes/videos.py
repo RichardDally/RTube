@@ -3,7 +3,7 @@ from pathlib import Path
 from flask import Blueprint, render_template, current_app, flash, redirect, url_for, request, abort, send_from_directory
 from flask_login import current_user, login_required
 
-from rtube.models import db, Video, VideoVisibility, Comment, EncodingJob
+from rtube.models import db, Video, VideoVisibility, Comment, EncodingJob, Favorite
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +116,14 @@ def watch_video():
     if start_time < 0:
         start_time = 0
 
+    # Check if video is in user's favorites
+    is_favorite = False
+    if current_user.is_authenticated:
+        is_favorite = Favorite.query.filter_by(
+            username=current_user.username,
+            video_id=video.id
+        ).first() is not None
+
     video_url = url_for('videos.serve_video', filename=f"{video.filename}.m3u8")
     logger.info(f"Loading video from [{video_url}]")
     return render_template(
@@ -127,6 +135,7 @@ def watch_video():
         description=video.description,
         video=video,
         start_time=start_time,
+        is_favorite=is_favorite,
     )
 
 
@@ -328,3 +337,78 @@ def delete_video():
     logger.info(f"Admin '{current_user.username}' deleted video '{video_title}' (ID: {short_id})")
     flash(f"Video '{video_title}' has been deleted.", "success")
     return redirect(url_for('videos.index'))
+
+
+@videos_bp.route('/watch/favorite', methods=['POST'])
+@login_required
+def add_favorite():
+    """Add a video to user's favorites."""
+    short_id = request.args.get('v', '')
+    if not short_id:
+        return render_template(
+            '404.html',
+            title="Video not found",
+            message="No video ID was provided."
+        ), 404
+
+    video = Video.query.filter(db.func.lower(Video.short_id) == short_id.lower()).first()
+    if not video:
+        return render_template(
+            '404.html',
+            title="Video not found",
+            message=f"The video with ID '{short_id}' doesn't exist or has been removed."
+        ), 404
+
+    # Check if already in favorites
+    existing = Favorite.query.filter_by(
+        username=current_user.username,
+        video_id=video.id
+    ).first()
+
+    if not existing:
+        favorite = Favorite(
+            username=current_user.username,
+            video_id=video.id
+        )
+        db.session.add(favorite)
+        db.session.commit()
+        flash("Video added to favorites.", "success")
+    else:
+        flash("Video is already in your favorites.", "info")
+
+    return redirect(url_for('videos.watch_video', v=short_id))
+
+
+@videos_bp.route('/watch/unfavorite', methods=['POST'])
+@login_required
+def remove_favorite():
+    """Remove a video from user's favorites."""
+    short_id = request.args.get('v', '')
+    if not short_id:
+        return render_template(
+            '404.html',
+            title="Video not found",
+            message="No video ID was provided."
+        ), 404
+
+    video = Video.query.filter(db.func.lower(Video.short_id) == short_id.lower()).first()
+    if not video:
+        return render_template(
+            '404.html',
+            title="Video not found",
+            message=f"The video with ID '{short_id}' doesn't exist or has been removed."
+        ), 404
+
+    favorite = Favorite.query.filter_by(
+        username=current_user.username,
+        video_id=video.id
+    ).first()
+
+    if favorite:
+        db.session.delete(favorite)
+        db.session.commit()
+        flash("Video removed from favorites.", "success")
+    else:
+        flash("Video was not in your favorites.", "info")
+
+    return redirect(url_for('videos.watch_video', v=short_id))

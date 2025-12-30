@@ -3,7 +3,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_user, logout_user, login_required, current_user
 
-from rtube.models import db, Video, Comment
+from rtube.models import db, Video, Comment, Favorite
 from rtube.models_auth import User
 
 logger = logging.getLogger(__name__)
@@ -133,9 +133,24 @@ def view_user_profile(username):
             'video': video
         })
 
+    # Get user's favorites (only visible to the user themselves)
+    favorites_data = []
+    is_own_profile = current_user.is_authenticated and current_user.username == username
+    if is_own_profile:
+        favorites = Favorite.query.filter_by(username=username).order_by(Favorite.created_at.desc()).all()
+        for favorite in favorites:
+            video = db.session.get(Video, favorite.video_id)
+            if video:  # Video might have been deleted
+                favorites_data.append({
+                    'favorite': favorite,
+                    'video': video
+                })
+
     return render_template(
         'auth/profile.html',
         profile_user=user,
         videos=videos,
-        comments_data=comments_data
+        comments_data=comments_data,
+        favorites_data=favorites_data,
+        is_own_profile=is_own_profile
     )

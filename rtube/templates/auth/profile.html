@@ -186,6 +186,9 @@
             <div class="stats">
                 <span class="stat"><span class="stat-value">{{ videos | length }}</span> video{{ 's' if videos | length != 1 else '' }}</span>
                 <span class="stat"><span class="stat-value">{{ comments_data | length }}</span> comment{{ 's' if comments_data | length != 1 else '' }}</span>
+                {% if is_own_profile %}
+                <span class="stat"><span class="stat-value">{{ favorites_data | length }}</span> favorite{{ 's' if favorites_data | length != 1 else '' }}</span>
+                {% endif %}
             </div>
         </div>
 
@@ -244,6 +247,41 @@
             <p class="empty-message">No comments posted yet.</p>
             {% endif %}
         </div>
+
+        {% if is_own_profile %}
+        <div class="section">
+            <h2 class="section-title">Favorites</h2>
+            {% if favorites_data %}
+            <ul class="video-list">
+                {% for data in favorites_data %}
+                <li>
+                    <a href="/watch?v={{ data.video.short_id }}">
+                        {% if data.video.thumbnail %}
+                        <img src="{{ url_for('videos.serve_thumbnail', filename=data.video.thumbnail) }}" alt="{{ data.video.title }}" class="thumbnail">
+                        {% else %}
+                        <div class="thumbnail"></div>
+                        {% endif %}
+                        <div class="video-info">
+                            <span class="video-title">{{ data.video.title or data.video.filename }}</span>
+                            <div class="video-meta">
+                                <span class="view-count">{{ data.video.view_count }} view{{ 's' if data.video.view_count != 1 else '' }}</span>
+                                {% if data.video.owner_username %}
+                                <span class="view-count">by {{ data.video.owner_username }}</span>
+                                {% endif %}
+                                {% if data.video.language %}
+                                <span class="language-badge">{{ data.video.language }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty-message">No favorites yet. Add videos to your favorites while watching them!</p>
+            {% endif %}
+        </div>
+        {% endif %}
 
         <footer>RTube v{{ rtube_version }}</footer>
     </body>
