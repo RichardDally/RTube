@@ -28,6 +28,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), nullable=False, default=UserRole.UPLOADER.value)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     last_login = db.Column(db.DateTime, nullable=True)
+    last_seen = db.Column(db.DateTime, nullable=True)
 
     def set_password(self, password: str) -> None:
         """Hash password using Argon2id (OWASP recommended)."""
@@ -49,6 +50,13 @@ class User(UserMixin, db.Model):
 
     def is_uploader(self) -> bool:
         return self.role in (UserRole.UPLOADER.value, UserRole.ADMIN.value)
+
+    def is_online(self, timeout_minutes: int = 5) -> bool:
+        """Check if user is considered online (active within timeout)."""
+        if not self.last_seen:
+            return False
+        from datetime import timedelta
+        return datetime.utcnow() - self.last_seen < timedelta(minutes=timeout_minutes)
 
     @staticmethod
     def validate_password(password: str) -> tuple[bool, list[str]]:

@@ -1,18 +1,30 @@
 import logging
 from pathlib import Path
-from flask import Blueprint, render_template, current_app, flash, redirect, url_for, request
+from flask import Blueprint, render_template, current_app, flash, redirect, url_for, request, abort, send_from_directory
 from flask_login import current_user, login_required
 
-from rtube.models import db, Video, VideoVisibility, Comment
+from rtube.models import db, Video, VideoVisibility, Comment, EncodingJob
 
 logger = logging.getLogger(__name__)
 
 videos_bp = Blueprint('videos', __name__)
 
 
+@videos_bp.route('/media/videos/<path:filename>')
+def serve_video(filename):
+    """Serve video files from the instance/videos folder."""
+    return send_from_directory(current_app.config["VIDEOS_FOLDER"], filename)
+
+
+@videos_bp.route('/media/thumbnails/<path:filename>')
+def serve_thumbnail(filename):
+    """Serve thumbnail files from the instance/thumbnails folder."""
+    return send_from_directory(current_app.config["THUMBNAILS_FOLDER"], filename)
+
+
 def get_available_videos(include_private: bool = False):
-    """Liste les vidéos disponibles dans le dossier static/videos."""
-    videos_path = Path(current_app.static_folder) / "videos"
+    """Liste les vidéos disponibles dans le dossier instance/videos."""
+    videos_path = Path(current_app.config["VIDEOS_FOLDER"])
     if not videos_path.exists():
         return []
 
@@ -104,12 +116,12 @@ def watch_video():
     if start_time < 0:
         start_time = 0
 
-    video_path_to_load = f"videos/{video.filename}.m3u8"
-    logger.info(f"Looking for [{video_path_to_load}]")
+    video_url = url_for('videos.serve_video', filename=f"{video.filename}.m3u8")
+    logger.info(f"Loading video from [{video_url}]")
     return render_template(
         'index.html',
         filename=video.title or video.filename,
-        video_path_to_load=video_path_to_load,
+        video_url=video_url,
         markers=None,
         view_count=video.view_count,
         description=video.description,
@@ -250,3 +262,69 @@ def edit_comment():
 
     flash("Comment updated successfully.", "success")
     return redirect(url_for('videos.watch_video', v=short_id))
+
+
+@videos_bp.route('/watch/delete', methods=['POST'])
+@login_required
+def delete_video():
+    """Delete a video (owner or admin only)."""
+    short_id = request.args.get('v', '')
+    if not short_id:
+        return render_template(
+            '404.html',
+            title="Video not found",
+            message="No video ID was provided."
+        ), 404
+
+    video = Video.query.filter(db.func.lower(Video.short_id) == short_id.lower()).first()
+    if not video:
+        return render_template(
+            '404.html',
+            title="Video not found",
+            message=f"The video with ID '{short_id}' doesn't exist or has been removed."
+        ), 404
+
+    # Check permissions: owner can delete their own videos, admin can delete any
+    is_owner = video.owner_username == current_user.username
+    is_admin = current_user.is_admin()
+
+    if not is_owner and not is_admin:
+        abort(403)
+
+    video_title = video.title or video.filename
+    video_filename = video.filename
+
+    # Delete associated comments
+    Comment.query.filter_by(video_id=video.id).delete()
+
+    # Delete associated encoding jobs
+    EncodingJob.query.filter_by(video_id=video.id).delete()
+
+    # Delete video files from disk
+    videos_path = Path(current_app.config["VIDEOS_FOLDER"])
+    if videos_path.exists():
+        # Delete main m3u8 file
+        main_m3u8 = videos_path / f"{video_filename}.m3u8"
+        if main_m3u8.exists():
+            main_m3u8.unlink()
+            logger.info(f"Deleted file: {main_m3u8}")
+
+        # Delete quality-specific files (e.g., video_720p.m3u8, video_720p_001.ts)
+        for quality_file in videos_path.glob(f"{video_filename}_*"):
+            quality_file.unlink()
+            logger.info(f"Deleted file: {quality_file}")
+
+        # Delete thumbnail if exists
+        if video.thumbnail:
+            thumbnail_path = Path(current_app.config["THUMBNAILS_FOLDER"]) / video.thumbnail
+            if thumbnail_path.exists():
+                thumbnail_path.unlink()
+                logger.info(f"Deleted thumbnail: {thumbnail_path}")
+
+    # Delete video record from database
+    db.session.delete(video)
+    db.session.commit()
+
+    logger.info(f"Admin '{current_user.username}' deleted video '{video_title}' (ID: {short_id})")
+    flash(f"Video '{video_title}' has been deleted.", "success")
+    return redirect(url_for('videos.index'))

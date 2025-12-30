@@ -493,6 +493,190 @@ class TestEditCommentRoute:
         assert response.status_code == 404
 
 
+class TestDeleteVideoRoute:
+    """Tests for video deletion."""
+
+    def test_delete_video_requires_auth(self, client, sample_video):
+        """Test that deleting a video requires authentication."""
+        response = client.post(
+            f'/watch/delete?v={sample_video["short_id"]}',
+            follow_redirects=False
+        )
+        assert response.status_code == 302
+        assert '/auth/login' in response.location
+
+    def test_delete_video_forbidden_for_non_owner(self, authenticated_client, app):
+        """Test that deleting someone else's video is forbidden."""
+        # Create a video owned by a different user
+        with app.app_context():
+            video = Video(
+                title="Other User's Video",
+                filename="other_user_video",
+                owner_username="otheruser"
+            )
+            db.session.add(video)
+            db.session.commit()
+            short_id = video.short_id
+
+        response = authenticated_client.post(f'/watch/delete?v={short_id}')
+        assert response.status_code == 403
+
+    def test_delete_own_video_success(self, authenticated_client, sample_user, app):
+        """Test that owner can delete their own video."""
+        # Create a video owned by the authenticated user
+        with app.app_context():
+            video = Video(
+                title="My Video",
+                filename="my_video_to_delete",
+                owner_username=sample_user["username"]
+            )
+            db.session.add(video)
+            db.session.commit()
+            short_id = video.short_id
+
+        response = authenticated_client.post(
+            f'/watch/delete?v={short_id}',
+            follow_redirects=True
+        )
+        assert response.status_code == 200
+        assert b'has been deleted' in response.data
+
+        # Verify video is deleted from database
+        with app.app_context():
+            video = Video.query.filter_by(short_id=short_id).first()
+            assert video is None
+
+    def test_delete_video_success(self, admin_client, sample_video, app):
+        """Test that admin can delete a video."""
+        short_id = sample_video["short_id"]
+
+        response = admin_client.post(
+            f'/watch/delete?v={short_id}',
+            follow_redirects=True
+        )
+        assert response.status_code == 200
+        assert b'has been deleted' in response.data
+
+        # Verify video is deleted from database
+        with app.app_context():
+            video = Video.query.filter_by(short_id=short_id).first()
+            assert video is None
+
+    def test_delete_video_nonexistent(self, admin_client):
+        """Test deleting non-existent video returns 404."""
+        response = admin_client.post('/watch/delete?v=nonexistent123')
+        assert response.status_code == 404
+
+    def test_delete_video_missing_id(self, admin_client):
+        """Test deleting without video ID returns 404."""
+        response = admin_client.post('/watch/delete')
+        assert response.status_code == 404
+
+    def test_delete_video_deletes_comments(self, admin_client, sample_video, app):
+        """Test that deleting a video also deletes its comments."""
+        # Create a comment first
+        with app.app_context():
+            video = Video.query.get(sample_video["id"])
+            comment = Comment(
+                video_id=video.id,
+                author_username="testuser",
+                content="Test comment"
+            )
+            db.session.add(comment)
+            db.session.commit()
+            comment_id = comment.id
+
+        # Delete the video
+        response = admin_client.post(
+            f'/watch/delete?v={sample_video["short_id"]}',
+            follow_redirects=True
+        )
+        assert response.status_code == 200
+
+        # Verify comment is also deleted
+        with app.app_context():
+            comment = Comment.query.get(comment_id)
+            assert comment is None
+
+    def test_delete_button_visible_to_admin(self, admin_client, sample_video, app):
+        """Test that delete button is visible to admin on watch page."""
+        # Create m3u8 file for the video
+        import os
+        videos_path = os.path.join(app.static_folder, 'videos')
+        os.makedirs(videos_path, exist_ok=True)
+        m3u8_path = os.path.join(videos_path, f'{sample_video["filename"]}.m3u8')
+        with open(m3u8_path, 'w') as f:
+            f.write('#EXTM3U\n#EXT-X-ENDLIST\n')
+
+        response = admin_client.get(f'/watch?v={sample_video["short_id"]}')
+        assert response.status_code == 200
+        assert b'Delete Video' in response.data
+
+        # Cleanup
+        if os.path.exists(m3u8_path):
+            os.remove(m3u8_path)
+
+    def test_delete_button_hidden_from_non_owner(self, authenticated_client, app):
+        """Test that delete button is hidden from non-owners."""
+        import os
+        # Create a video owned by a different user
+        with app.app_context():
+            video = Video(
+                title="Other User's Video",
+                filename="other_user_video_btn",
+                owner_username="otheruser"
+            )
+            db.session.add(video)
+            db.session.commit()
+            short_id = video.short_id
+            filename = video.filename
+
+        # Create m3u8 file for the video
+        videos_path = os.path.join(app.static_folder, 'videos')
+        os.makedirs(videos_path, exist_ok=True)
+        m3u8_path = os.path.join(videos_path, f'{filename}.m3u8')
+        with open(m3u8_path, 'w') as f:
+            f.write('#EXTM3U\n#EXT-X-ENDLIST\n')
+
+        response = authenticated_client.get(f'/watch?v={short_id}')
+        assert response.status_code == 200
+        assert b'Delete Video' not in response.data
+
+        # Cleanup
+        if os.path.exists(m3u8_path):
+            os.remove(m3u8_path)
+
+    def test_delete_button_visible_to_owner(self, authenticated_client, sample_user, app):
+        """Test that delete button is visible to video owner."""
+        import os
+        # Create a video owned by the authenticated user
+        with app.app_context():
+            video = Video(
+                title="My Video",
+                filename="my_video_btn",
+                owner_username=sample_user["username"]
+            )
+            db.session.add(video)
+            db.session.commit()
+            short_id = video.short_id
+            filename = video.filename
+
+        # Create m3u8 file for the video
+        videos_path = os.path.join(app.static_folder, 'videos')
+        os.makedirs(videos_path, exist_ok=True)
+        m3u8_path = os.path.join(videos_path, f'{filename}.m3u8')
+        with open(m3u8_path, 'w') as f:
+            f.write('#EXTM3U\n#EXT-X-ENDLIST\n')
+
+        response = authenticated_client.get(f'/watch?v={short_id}')
+        assert response.status_code == 200
+        assert b'Delete Video' in response.data
+
+        # Cleanup
+        if os.path.exists(m3u8_path):
+            os.remove(m3u8_path)
+
+
 class TestEncodingRoutes:
     """Tests for encoding routes."""
 

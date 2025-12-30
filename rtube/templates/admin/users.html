@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>RTube - Admin - Users</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #1a1a1a;
+                color: #fff;
+            }
+            h1 {
+                margin-bottom: 10px;
+            }
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 30px;
+            }
+            .header-left {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+            }
+            .back-link {
+                color: #888;
+                text-decoration: none;
+                font-size: 14px;
+            }
+            .back-link:hover {
+                color: #fff;
+            }
+            .user-count {
+                color: #888;
+                font-size: 14px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                background-color: #2a2a2a;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            th, td {
+                padding: 15px;
+                text-align: left;
+                border-bottom: 1px solid #333;
+            }
+            th {
+                background-color: #333;
+                font-weight: 600;
+                color: #aaa;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            tr:last-child td {
+                border-bottom: none;
+            }
+            tr:hover {
+                background-color: #333;
+            }
+            .username {
+                font-weight: 500;
+                color: #fff;
+            }
+            .username a {
+                color: #4CAF50;
+                text-decoration: none;
+            }
+            .username a:hover {
+                text-decoration: underline;
+            }
+            .role-badge {
+                display: inline-block;
+                padding: 3px 8px;
+                border-radius: 3px;
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+            }
+            .role-admin {
+                background-color: #8B0000;
+                color: #fff;
+            }
+            .role-uploader {
+                background-color: #2E7D32;
+                color: #fff;
+            }
+            .status-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 3px 8px;
+                border-radius: 3px;
+                font-size: 11px;
+                font-weight: 500;
+            }
+            .status-online {
+                background-color: #1B5E20;
+                color: #81C784;
+            }
+            .status-offline {
+                background-color: #333;
+                color: #888;
+            }
+            .status-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+            }
+            .status-online .status-dot {
+                background-color: #4CAF50;
+            }
+            .status-offline .status-dot {
+                background-color: #666;
+            }
+            .stat-count {
+                color: #888;
+                font-size: 14px;
+            }
+            .stat-count.highlight {
+                color: #4CAF50;
+                font-weight: 500;
+            }
+            .date {
+                color: #888;
+                font-size: 13px;
+            }
+            .empty-message {
+                text-align: center;
+                color: #888;
+                padding: 40px;
+                font-style: italic;
+            }
+            .flash-messages {
+                margin-bottom: 20px;
+            }
+            .flash-message {
+                padding: 12px;
+                border-radius: 4px;
+                margin-bottom: 10px;
+                font-size: 14px;
+            }
+            .flash-error {
+                background-color: #5c1a1a;
+                color: #ff6b6b;
+                border: 1px solid #8B0000;
+            }
+            .flash-success {
+                background-color: #1a3d1a;
+                color: #81C784;
+                border: 1px solid #2E7D32;
+            }
+            .btn-change-password {
+                padding: 8px 16px;
+                background-color: #444;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size: 13px;
+                transition: background-color 0.2s;
+            }
+            .btn-change-password:hover {
+                background-color: #555;
+            }
+            footer {
+                margin-top: 50px;
+                padding-top: 20px;
+                border-top: 1px solid #333;
+                text-align: center;
+                color: #666;
+                font-size: 12px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="header-left">
+                <a href="/" class="back-link">&larr; Back to RTube</a>
+                <h1>User Management</h1>
+            </div>
+            <div class="header-left">
+                <span class="user-count">{{ users_data | length }} user{{ 's' if users_data | length != 1 else '' }}</span>
+                <a href="{{ url_for('admin.change_password') }}" class="btn-change-password">Change Password</a>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% if users_data %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Videos</th>
+                    <th>Comments</th>
+                    <th>Created</th>
+                    <th>Last Login</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in users_data %}
+                <tr>
+                    <td class="username"><a href="{{ url_for('auth.user_profile', username=data.user.username) }}">{{ data.user.username }}</a></td>
+                    <td>
+                        <span class="role-badge role-{{ data.user.role }}">{{ data.user.role }}</span>
+                    </td>
+                    <td>
+                        {% if data.is_online %}
+                        <span class="status-badge status-online">
+                            <span class="status-dot"></span>
+                            Online
+                        </span>
+                        {% else %}
+                        <span class="status-badge status-offline">
+                            <span class="status-dot"></span>
+                            Offline
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="stat-count {{ 'highlight' if data.video_count > 0 else '' }}">{{ data.video_count }}</span>
+                    </td>
+                    <td>
+                        <span class="stat-count {{ 'highlight' if data.comment_count > 0 else '' }}">{{ data.comment_count }}</span>
+                    </td>
+                    <td class="date">{{ data.user.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="date">
+                        {% if data.user.last_login %}
+                        {{ data.user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                        {% else %}
+                        Never
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-message">No users found.</p>
+        {% endif %}
+
+        <footer>RTube v{{ rtube_version }}</footer>
+    </body>
+</html>

@@ -138,6 +138,10 @@
             }
             .username {
                 color: #4CAF50;
+                text-decoration: none;
+            }
+            .username:hover {
+                text-decoration: underline;
             }
             .btn-login {
                 padding: 8px 16px;
@@ -150,6 +154,18 @@
             .btn-login:hover {
                 background-color: #555;
             }
+            .btn-admin {
+                padding: 8px 16px;
+                background-color: #8B0000;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size: 13px;
+                transition: background-color 0.2s;
+            }
+            .btn-admin:hover {
+                background-color: #a00000;
+            }
             footer {
                 margin-top: 50px;
                 padding-top: 20px;
@@ -157,6 +173,25 @@
                 text-align: center;
                 color: #666;
                 font-size: 12px;
+            }
+            .flash-messages {
+                margin-bottom: 20px;
+            }
+            .flash-message {
+                padding: 12px;
+                border-radius: 4px;
+                margin-bottom: 10px;
+                font-size: 14px;
+            }
+            .flash-error {
+                background-color: #5c1a1a;
+                color: #ff6b6b;
+                border: 1px solid #8B0000;
+            }
+            .flash-success {
+                background-color: #1a3d1a;
+                color: #81C784;
+                border: 1px solid #2E7D32;
             }
         </style>
     </head>
@@ -166,7 +201,7 @@
             <div class="header-actions">
                 <div class="auth-links">
                     {% if current_user.is_authenticated %}
-                    <span class="username">{{ current_user.username }}</span>
+                    <a href="{{ url_for('auth.profile') }}" class="username">{{ current_user.username }}</a>
                     <a href="{{ url_for('auth.logout') }}">Logout</a>
                     {% else %}
                     <a href="{{ url_for('auth.login') }}" class="btn-login">Login</a>
@@ -174,17 +209,31 @@
                     {% endif %}
                 </div>
                 {% if current_user.is_authenticated %}
+                {% if current_user.is_admin() %}
+                <a href="{{ url_for('admin.users') }}" class="btn-admin">Admin</a>
+                {% endif %}
                 <a href="/encode" class="btn-upload">Encode a video</a>
                 {% endif %}
             </div>
         </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
         {% if videos %}
         <ul class="video-list">
             {% for video in videos %}
             <li>
                 <a href="/watch?v={{ video.short_id }}">
                     {% if video.thumbnail %}
-                    <img src="{{ url_for('static', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
+                    <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
                     {% else %}
                     <div class="thumbnail"></div>
                     {% endif %}

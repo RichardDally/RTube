@@ -35,6 +35,7 @@ class Video(db.Model):
     thumbnail = db.Column(db.String(255), nullable=True)
     view_count = db.Column(db.Integer, default=0, nullable=False)
     owner_username = db.Column(db.String(80), nullable=True)  # Username of the uploader
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     def is_public(self) -> bool:
         return self.visibility == VideoVisibility.PUBLIC.value
@@ -62,6 +63,7 @@ class EncodingJob(db.Model):
     error_message = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     completed_at = db.Column(db.DateTime, nullable=True)
+    started_by_username = db.Column(db.String(80), nullable=True)  # Username who started the encoding
 
     video = db.relationship("Video", backref=db.backref("encoding_jobs", lazy=True))
 

@@ -46,6 +46,16 @@
                 font-family: Arial, sans-serif;
                 font-size: 14px;
             }
+            .video-author {
+                color: #aaa;
+            }
+            .video-author a {
+                color: #4CAF50;
+                text-decoration: none;
+            }
+            .video-author a:hover {
+                text-decoration: underline;
+            }
             .view-count {
                 color: #aaa;
             }
@@ -255,6 +265,42 @@
                 background-color: #ff4444;
                 color: white;
             }
+            .flash-warning {
+                background-color: #ff9800;
+                color: white;
+            }
+            .video-actions {
+                margin-top: 15px;
+            }
+            .btn-delete-video {
+                padding: 8px 16px;
+                background-color: #8B0000;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 13px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .btn-delete-video:hover {
+                background-color: #a00000;
+            }
+            .btn-share {
+                padding: 8px 16px;
+                background-color: #444;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 13px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .btn-share:hover {
+                background-color: #555;
+            }
+            .btn-share.copied {
+                background-color: #4CAF50;
+            }
         </style>
         <script>
             var filename = '{{ filename }}'
@@ -269,7 +315,7 @@
         </div>
         <div class="video-container">
             <video-js id="RPlayer" class="vjs-default-skin" controls preload="auto" width="1280" height="720">
-                <source src="{{ url_for('static', filename=video_path_to_load)}}" type="application/x-mpegURL">
+                <source src="{{ video_url }}" type="application/x-mpegURL">
                 Your browser doesn't support video tag.
             </video-js>
             <div class="video-meta">
@@ -277,7 +323,15 @@
                 {% if description %}
                 <span class="video-description">{{ description }}</span>
                 {% endif %}
+                <button type="button" class="btn-share" onclick="shareVideo(this)">Share</button>
             </div>
+            {% if current_user.is_authenticated and video and (current_user.is_admin() or video.owner_username == current_user.username) %}
+            <div class="video-actions">
+                <form method="post" action="{{ url_for('videos.delete_video', v=video.short_id) }}" style="display: inline;">
+                    <button type="submit" class="btn-delete-video" onclick="return confirm('Are you sure you want to delete this video? This action cannot be undone.')">Delete Video</button>
+                </form>
+            </div>
+            {% endif %}
         </div>
 
         {% if video %}
@@ -372,6 +426,22 @@
                     editForm.classList.toggle('active');
                     commentContent.style.display = editForm.classList.contains('active') ? 'none' : 'block';
                 }
+            }
+
+            function shareVideo(button) {
+                const url = window.location.href.split('#')[0];
+                navigator.clipboard.writeText(url).then(function() {
+                    const originalText = button.textContent;
+                    button.textContent = 'Copied!';
+                    button.classList.add('copied');
+                    setTimeout(function() {
+                        button.textContent = originalText;
+                        button.classList.remove('copied');
+                    }, 2000);
+                }).catch(function(err) {
+                    console.error('Failed to copy URL:', err);
+                    alert('Failed to copy URL to clipboard');
+                });
             }
         </script>
    </body>

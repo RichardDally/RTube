@@ -1,9 +1,9 @@
 import logging
 from datetime import datetime
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_user, logout_user, login_required, current_user
 
-from rtube.models import db
+from rtube.models import db, Video, Comment
 from rtube.models_auth import User
 
 logger = logging.getLogger(__name__)
@@ -91,3 +91,51 @@ def logout():
     logout_user()
     logger.info(f"User '{username}' logged out")
     return redirect(url_for('videos.index'))
+
+
+@auth_bp.route('/profile')
+@login_required
+def profile():
+    """Display the current user's profile with their videos and comments."""
+    return view_user_profile(current_user.username)
+
+
+@auth_bp.route('/profile/<username>')
+@login_required
+def user_profile(username):
+    """Display a specific user's profile."""
+    return view_user_profile(username)
+
+
+def view_user_profile(username):
+    """Helper function to display a user's profile."""
+    # Check if user exists
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return render_template(
+            '404.html',
+            title="User not found",
+            message=f"The user '{username}' doesn't exist."
+        ), 404
+
+    # Get user's videos ordered by creation date (newest first)
+    videos = Video.query.filter_by(owner_username=username).order_by(Video.created_at.desc()).all()
+
+    # Get user's comments with associated video info
+    comments = Comment.query.filter_by(author_username=username).order_by(Comment.created_at.desc()).all()
+
+    # Build comment data with video info
+    comments_data = []
+    for comment in comments:
+        video = db.session.get(Video, comment.video_id)
+        comments_data.append({
+            'comment': comment,
+            'video': video
+        })
+
+    return render_template(
+        'auth/profile.html',
+        profile_user=user,
+        videos=videos,
+        comments_data=comments_data
+    )

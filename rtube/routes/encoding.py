@@ -59,11 +59,11 @@ def upload_video():
     # Use short_id as filename base to ensure uniqueness
     filename_base = video.short_id
     video.filename = filename_base
-    video.thumbnail = f"thumbnails/{filename_base}.jpg"
+    video.thumbnail = f"{filename_base}.jpg"
 
-    # Save uploaded file
-    upload_folder = Path(current_app.static_folder)
-    input_path = upload_folder / f"{filename_base}.mp4"
+    # Save uploaded file to instance folder
+    videos_folder = Path(current_app.config["VIDEOS_FOLDER"])
+    input_path = videos_folder / f"{filename_base}.mp4"
     file.save(input_path)
 
     db.session.commit()
@@ -72,14 +72,15 @@ def upload_video():
     job = EncodingJob(
         video_id=video.id,
         qualities=",".join(qualities),
-        status="pending"
+        status="pending",
+        started_by_username=current_user.username
     )
     db.session.add(job)
     db.session.commit()
 
     # Start encoding
-    output_path = Path(current_app.static_folder) / "videos" / f"{filename_base}.m3u8"
-    thumbnail_path = Path(current_app.static_folder) / video.thumbnail
+    output_path = videos_folder / f"{filename_base}.m3u8"
+    thumbnail_path = Path(current_app.config["THUMBNAILS_FOLDER"]) / video.thumbnail
     keep_original = current_app.config.get("KEEP_ORIGINAL_VIDEO", False)
     encoder_service.encode_video(job.id, input_path, output_path, qualities, delete_original=not keep_original, thumbnail_path=thumbnail_path)
 
