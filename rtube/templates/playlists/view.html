@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>RTube - {{ playlist.name }}</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #1a1a1a;
+                color: #fff;
+            }
+            .header {
+                margin-bottom: 30px;
+            }
+            .header-top {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                margin-bottom: 10px;
+            }
+            .back-link {
+                color: #888;
+                text-decoration: none;
+                font-size: 14px;
+            }
+            .back-link:hover {
+                color: #fff;
+            }
+            h1 {
+                margin: 0;
+                color: #4CAF50;
+            }
+            .playlist-meta {
+                color: #888;
+                font-size: 14px;
+                margin-bottom: 10px;
+            }
+            .playlist-description {
+                color: #aaa;
+                font-size: 14px;
+                margin-bottom: 20px;
+            }
+            .playlist-actions {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+            .btn-edit, .btn-delete {
+                padding: 8px 16px;
+                border: none;
+                border-radius: 5px;
+                font-size: 13px;
+                cursor: pointer;
+                text-decoration: none;
+            }
+            .btn-edit {
+                background-color: #444;
+                color: white;
+            }
+            .btn-edit:hover {
+                background-color: #555;
+            }
+            .btn-delete {
+                background-color: #8B0000;
+                color: white;
+            }
+            .btn-delete:hover {
+                background-color: #a00000;
+            }
+            .video-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            .video-list li {
+                margin-bottom: 15px;
+            }
+            .video-item {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                padding: 10px;
+                background-color: #2a2a2a;
+                border-radius: 5px;
+                transition: background-color 0.2s;
+            }
+            .video-item:hover {
+                background-color: #3a3a3a;
+            }
+            .video-link {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                flex: 1;
+                color: #fff;
+                text-decoration: none;
+            }
+            .thumbnail {
+                width: 160px;
+                height: 90px;
+                object-fit: cover;
+                border-radius: 4px;
+                background-color: #444;
+                flex-shrink: 0;
+            }
+            .video-info {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+            .video-title {
+                font-size: 16px;
+                font-weight: 500;
+            }
+            .video-meta {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            .view-count {
+                color: #888;
+                font-size: 13px;
+            }
+            .btn-remove {
+                padding: 6px 12px;
+                background-color: #5a1a1a;
+                color: #ff6b6b;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+                cursor: pointer;
+            }
+            .btn-remove:hover {
+                background-color: #6a2a2a;
+            }
+            .empty-message {
+                color: #888;
+                font-style: italic;
+                text-align: center;
+                padding: 40px;
+            }
+            .flash-messages {
+                margin-bottom: 20px;
+            }
+            .flash-message {
+                padding: 12px;
+                border-radius: 4px;
+                margin-bottom: 10px;
+                font-size: 14px;
+            }
+            .flash-error {
+                background-color: #5c1a1a;
+                color: #ff6b6b;
+                border: 1px solid #8B0000;
+            }
+            .flash-success {
+                background-color: #1a3d1a;
+                color: #81C784;
+                border: 1px solid #2E7D32;
+            }
+            footer {
+                margin-top: 50px;
+                padding-top: 20px;
+                border-top: 1px solid #333;
+                text-align: center;
+                color: #666;
+                font-size: 12px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="header-top">
+                <a href="/" class="back-link">&larr; Back to RTube</a>
+            </div>
+            <h1>{{ playlist.name }}</h1>
+            <div class="playlist-meta">
+                {{ playlist.video_count() }} video{{ 's' if playlist.video_count() != 1 else '' }}
+                &bull; Created by <a href="{{ url_for('auth.user_profile', username=playlist.owner_username) }}" style="color: #4CAF50;">{{ playlist.owner_username }}</a>
+                &bull; {{ playlist.created_at.strftime('%Y-%m-%d') }}
+            </div>
+            {% if playlist.description %}
+            <div class="playlist-description">{{ playlist.description }}</div>
+            {% endif %}
+            {% if is_owner %}
+            <div class="playlist-actions">
+                <a href="{{ url_for('playlists.edit', playlist_id=playlist.id) }}" class="btn-edit">Edit</a>
+                <form method="post" action="{{ url_for('playlists.delete', playlist_id=playlist.id) }}" style="display: inline;">
+                    <button type="submit" class="btn-delete" onclick="return confirm('Delete this playlist?')">Delete</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% if playlist.videos %}
+        <ul class="video-list">
+            {% for entry in playlist.videos %}
+            <li>
+                <div class="video-item">
+                    <a href="/watch?v={{ entry.video.short_id }}" class="video-link">
+                        {% if entry.video.thumbnail %}
+                        <img src="{{ url_for('videos.serve_thumbnail', filename=entry.video.thumbnail) }}" alt="{{ entry.video.title }}" class="thumbnail">
+                        {% else %}
+                        <div class="thumbnail"></div>
+                        {% endif %}
+                        <div class="video-info">
+                            <span class="video-title">{{ entry.video.title or entry.video.filename }}</span>
+                            <div class="video-meta">
+                                <span class="view-count">{{ entry.video.view_count }} view{{ 's' if entry.video.view_count != 1 else '' }}</span>
+                                {% if entry.video.owner_username %}
+                                <span class="view-count">by {{ entry.video.owner_username }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% if is_owner %}
+                    <form method="post" action="{{ url_for('playlists.remove_video', playlist_id=playlist.id) }}" style="display: inline;">
+                        <input type="hidden" name="video_id" value="{{ entry.video.id }}">
+                        <button type="submit" class="btn-remove">Remove</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-message">This playlist is empty. Add videos while watching them!</p>
+        {% endif %}
+
+        <footer>RTube v{{ rtube_version }}</footer>
+    </body>
+</html>

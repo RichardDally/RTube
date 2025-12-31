@@ -1,0 +1,38 @@
+<div class="playlist-modal-header">
+    <h3>Add to Playlist</h3>
+</div>
+
+<div class="playlist-modal-body">
+    {% if playlists %}
+    <div class="playlist-options">
+        {% for playlist in playlists %}
+        <div class="playlist-option">
+            {% if playlist.id in video_playlist_ids %}
+            <span class="playlist-name in-playlist">{{ playlist.name }}</span>
+            <span class="already-added">Already added</span>
+            {% else %}
+            <form method="post" action="{{ url_for('playlists.add_video') }}" class="add-form">
+                <input type="hidden" name="playlist_id" value="{{ playlist.id }}">
+                <input type="hidden" name="video_id" value="{{ video_id }}">
+                <input type="hidden" name="video_short_id" value="{{ video_short_id }}">
+                <span class="playlist-name">{{ playlist.name }}</span>
+                <button type="submit" class="btn-add">Add</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="no-playlists">You don't have any playlists yet.</p>
+    {% endif %}
+
+    <div class="create-new-section">
+        <h4>Create new playlist</h4>
+        <form method="post" action="{{ url_for('playlists.create') }}" class="create-form">
+            <input type="hidden" name="video_id" value="{{ video_id }}">
+            <input type="hidden" name="video_short_id" value="{{ video_short_id }}">
+            <input type="text" name="name" placeholder="Playlist name..." required maxlength="255" class="playlist-name-input">
+            <button type="submit" class="btn-create">Create & Add</button>
+        </form>
+    </div>
+</div>

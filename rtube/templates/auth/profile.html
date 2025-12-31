@@ -167,6 +167,48 @@
                 color: #888;
                 font-style: italic;
             }
+            .playlist-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            .playlist-list li {
+                margin-bottom: 15px;
+            }
+            .playlist-link {
+                display: block;
+                padding: 15px;
+                background-color: #2a2a2a;
+                border-radius: 5px;
+                text-decoration: none;
+                color: #fff;
+                transition: background-color 0.2s;
+            }
+            a.playlist-link:hover {
+                background-color: #3a3a3a;
+            }
+            .playlist-info {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+            .playlist-name {
+                font-size: 16px;
+                font-weight: 500;
+                color: #4CAF50;
+            }
+            .playlist-meta {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                color: #888;
+                font-size: 13px;
+            }
+            .playlist-description {
+                color: #aaa;
+                font-size: 13px;
+                margin-top: 5px;
+            }
             footer {
                 margin-top: 50px;
                 padding-top: 20px;
@@ -187,6 +229,7 @@
                 <span class="stat"><span class="stat-value">{{ videos | length }}</span> video{{ 's' if videos | length != 1 else '' }}</span>
                 <span class="stat"><span class="stat-value">{{ comments_data | length }}</span> comment{{ 's' if comments_data | length != 1 else '' }}</span>
                 <span class="stat"><span class="stat-value">{{ favorites_data | length }}</span> favorite{{ 's' if favorites_data | length != 1 else '' }}</span>
+                <span class="stat"><span class="stat-value">{{ playlists | length }}</span> playlist{{ 's' if playlists | length != 1 else '' }}</span>
             </div>
         </div>
 
@@ -276,6 +319,32 @@
             </ul>
             {% else %}
             <p class="empty-message">No favorites yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Playlists</h2>
+            {% if playlists %}
+            <ul class="playlist-list">
+                {% for playlist in playlists %}
+                <li>
+                    <a href="{{ url_for('playlists.view', playlist_id=playlist.id) }}" class="playlist-link">
+                        <div class="playlist-info">
+                            <span class="playlist-name">{{ playlist.name }}</span>
+                            <div class="playlist-meta">
+                                <span class="video-count">{{ playlist.video_count() }} video{{ 's' if playlist.video_count() != 1 else '' }}</span>
+                                <span class="updated-date">Updated {{ playlist.updated_at.strftime('%Y-%m-%d') }}</span>
+                            </div>
+                            {% if playlist.description %}
+                            <span class="playlist-description">{{ playlist.description[:100] }}{% if playlist.description|length > 100 %}...{% endif %}</span>
+                            {% endif %}
+                        </div>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty-message">No playlists created yet.</p>
             {% endif %}
         </div>
 

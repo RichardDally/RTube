@@ -321,6 +321,151 @@
             .btn-favorite.is-favorite:hover {
                 background-color: #FFC000;
             }
+            .btn-playlist {
+                padding: 8px 16px;
+                background-color: #444;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 13px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .btn-playlist:hover {
+                background-color: #555;
+            }
+            /* Modal styles */
+            .modal-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                z-index: 1000;
+                justify-content: center;
+                align-items: center;
+            }
+            .modal-overlay.active {
+                display: flex;
+            }
+            .modal-content {
+                background-color: #2a2a2a;
+                border-radius: 8px;
+                width: 400px;
+                max-width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+            .playlist-modal-header {
+                padding: 15px 20px;
+                border-bottom: 1px solid #444;
+            }
+            .playlist-modal-header h3 {
+                margin: 0;
+                font-size: 18px;
+            }
+            .playlist-modal-body {
+                padding: 15px 20px;
+            }
+            .playlist-options {
+                margin-bottom: 20px;
+            }
+            .playlist-option {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px;
+                background-color: #333;
+                border-radius: 4px;
+                margin-bottom: 8px;
+            }
+            .playlist-option .playlist-name {
+                flex: 1;
+            }
+            .playlist-option .playlist-name.in-playlist {
+                color: #888;
+            }
+            .playlist-option .already-added {
+                color: #4CAF50;
+                font-size: 12px;
+            }
+            .playlist-option .add-form {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                width: 100%;
+            }
+            .playlist-option .btn-add {
+                padding: 6px 12px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+                cursor: pointer;
+            }
+            .playlist-option .btn-add:hover {
+                background-color: #45a049;
+            }
+            .no-playlists {
+                color: #888;
+                font-style: italic;
+                text-align: center;
+                padding: 20px;
+            }
+            .create-new-section {
+                border-top: 1px solid #444;
+                padding-top: 15px;
+            }
+            .create-new-section h4 {
+                margin: 0 0 10px 0;
+                font-size: 14px;
+                color: #aaa;
+            }
+            .create-form {
+                display: flex;
+                gap: 10px;
+            }
+            .playlist-name-input {
+                flex: 1;
+                padding: 8px 12px;
+                border: 1px solid #444;
+                border-radius: 4px;
+                background-color: #333;
+                color: #fff;
+                font-size: 14px;
+            }
+            .playlist-name-input:focus {
+                outline: none;
+                border-color: #4CAF50;
+            }
+            .btn-create {
+                padding: 8px 16px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 13px;
+                cursor: pointer;
+            }
+            .btn-create:hover {
+                background-color: #45a049;
+            }
+            .modal-close {
+                position: absolute;
+                top: 10px;
+                right: 15px;
+                background: none;
+                border: none;
+                color: #888;
+                font-size: 24px;
+                cursor: pointer;
+            }
+            .modal-close:hover {
+                color: #fff;
+            }
         </style>
         <script>
             var filename = '{{ filename }}'
@@ -357,6 +502,7 @@
                     <button type="submit" class="btn-favorite">Add to Favorites</button>
                 </form>
                 {% endif %}
+                <button type="button" class="btn-playlist" onclick="openPlaylistModal()">Add to Playlist</button>
                 {% endif %}
             </div>
             {% if current_user.is_authenticated and video and (current_user.is_admin() or video.owner_username == current_user.username) %}
@@ -477,6 +623,59 @@
                     alert('Failed to copy URL to clipboard');
                 });
             }
+
+            function openPlaylistModal() {
+                const modal = document.getElementById('playlist-modal');
+                const modalBody = document.getElementById('playlist-modal-body');
+                modal.classList.add('active');
+
+                // Load playlist content via AJAX
+                fetch('{{ url_for("playlists.modal_content") }}?video_id={{ video.id if video else 0 }}&video_short_id={{ video.short_id if video else "" }}')
+                    .then(response => response.text())
+                    .then(html => {
+                        modalBody.innerHTML = html;
+                    })
+                    .catch(err => {
+                        modalBody.innerHTML = '<p style="color: #ff6b6b; padding: 20px;">Failed to load playlists.</p>';
+                    });
+            }
+
+            function closePlaylistModal() {
+                const modal = document.getElementById('playlist-modal');
+                modal.classList.remove('active');
+            }
+
+            // Close modal when clicking outside
+            document.addEventListener('click', function(event) {
+                const modal = document.getElementById('playlist-modal');
+                if (event.target === modal) {
+                    closePlaylistModal();
+                }
+            });
+
+            // Close modal with Escape key
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    closePlaylistModal();
+                }
+            });
         </script>
+
+        {% if current_user.is_authenticated and video %}
+        <!-- Playlist Modal -->
+        <div id="playlist-modal" class="modal-overlay">
+            <div class="modal-content" style="position: relative;">
+                <button type="button" class="modal-close" onclick="closePlaylistModal()">&times;</button>
+                <div id="playlist-modal-body">
+                    <div class="playlist-modal-header">
+                        <h3>Add to Playlist</h3>
+                    </div>
+                    <div class="playlist-modal-body">
+                        <p style="color: #888;">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
    </body>
 </html>

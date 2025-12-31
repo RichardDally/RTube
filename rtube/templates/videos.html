@@ -166,6 +166,18 @@
             .btn-admin:hover {
                 background-color: #a00000;
             }
+            .btn-playlists {
+                padding: 8px 16px;
+                background-color: #444;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size: 13px;
+                transition: background-color 0.2s;
+            }
+            .btn-playlists:hover {
+                background-color: #555;
+            }
             footer {
                 margin-top: 50px;
                 padding-top: 20px;
@@ -282,6 +294,7 @@
                 {% if current_user.is_admin() %}
                 <a href="{{ url_for('admin.users') }}" class="btn-admin">Admin</a>
                 {% endif %}
+                <a href="{{ url_for('playlists.index') }}" class="btn-playlists">Playlists</a>
                 <a href="/encode" class="btn-upload">Encode a video</a>
                 {% endif %}
             </div>

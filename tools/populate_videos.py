@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from flask import current_app
 from rtube.app import create_app
-from rtube.models import db, Video, VideoVisibility, Comment
+from rtube.models import db, Video, VideoVisibility, Comment, Playlist, PlaylistVideo
 from rtube.models_auth import User, UserRole
 
 app = typer.Typer(help="Populate database with fake videos for testing.")
@@ -113,6 +113,26 @@ COMMENTS = [
     "This is the best tutorial I've found.",
     "Finally someone explains it properly!",
     "Love the quality of your videos.",
+]
+
+# Sample playlist names
+PLAYLIST_NAMES = [
+    "Favorites",
+    "Watch Later",
+    "Learning {topic}",
+    "{topic} Tutorials",
+    "Best of {topic}",
+    "Quick Tips",
+    "Must Watch",
+    "Study Material",
+]
+
+PLAYLIST_DESCRIPTIONS = [
+    "My collection of favorite videos on {topic}.",
+    "Videos I want to watch later.",
+    "Learning resources for {topic}.",
+    "The best tutorials about {topic}.",
+    None,  # Some playlists have no description
 ]
 
 # Placeholder HLS playlist content (minimal valid m3u8)
@@ -312,6 +332,58 @@ def create_fake_comments(videos: list[Video], users: list[User], count: int) -> 
     return comments
 
 
+def create_fake_playlists(videos: list[Video], users: list[User], count: int) -> list[Playlist]:
+    """Create fake playlists with random videos."""
+    from datetime import datetime, timedelta
+
+    playlists = []
+
+    for _ in range(count):
+        user = random.choice(users)
+        topic = random.choice(TOPICS)
+
+        # Generate playlist name
+        name_template = random.choice(PLAYLIST_NAMES)
+        name = name_template.format(topic=topic)
+
+        # Generate playlist description
+        desc_template = random.choice(PLAYLIST_DESCRIPTIONS)
+        description = desc_template.format(topic=topic) if desc_template else None
+
+        playlist = Playlist(
+            name=name,
+            description=description,
+            owner_username=user.username,
+            created_at=datetime.utcnow() - timedelta(
+                days=random.randint(0, 90),
+                hours=random.randint(0, 23)
+            )
+        )
+        db.session.add(playlist)
+        db.session.flush()  # Get the playlist ID
+
+        # Add 2-8 random videos to the playlist
+        num_videos = random.randint(2, min(8, len(videos)))
+        selected_videos = random.sample(videos, num_videos)
+
+        for position, video in enumerate(selected_videos):
+            playlist_video = PlaylistVideo(
+                playlist_id=playlist.id,
+                video_id=video.id,
+                position=position,
+                added_at=datetime.utcnow() - timedelta(
+                    days=random.randint(0, 30),
+                    hours=random.randint(0, 23)
+                )
+            )
+            db.session.add(playlist_video)
+
+        playlists.append(playlist)
+
+    db.session.commit()
+    return playlists
+
+
 def create_fake_videos(count: int, owners: list[User] | str = "admin") -> list[Video]:
     """Create fake video records in the database and placeholder files.
 
@@ -366,12 +438,16 @@ def create_fake_videos(count: int, owners: list[User] | str = "admin") -> list[V
 
 
 def clear_fake_data() -> dict[str, int]:
-    """Remove all fake data (videos, users, comments)."""
-    results = {"videos": 0, "users": 0, "comments": 0}
+    """Remove all fake data (videos, users, comments, playlists)."""
+    results = {"videos": 0, "users": 0, "comments": 0, "playlists": 0}
 
     # Get all fake videos to delete their files and associated comments
     fake_videos = Video.query.filter(Video.filename.like("fake_video_%")).all()
     fake_video_ids = [v.id for v in fake_videos]
+
+    # Delete playlist videos for fake videos
+    if fake_video_ids:
+        PlaylistVideo.query.filter(PlaylistVideo.video_id.in_(fake_video_ids)).delete(synchronize_session=False)
 
     # Delete comments on fake videos
     if fake_video_ids:
@@ -385,8 +461,11 @@ def clear_fake_data() -> dict[str, int]:
     # Delete fake videos from database
     results["videos"] = Video.query.filter(Video.filename.like("fake_video_%")).delete(synchronize_session=False)
 
-    # Delete fake users (those in USERNAMES list or starting with "user_")
+    # Delete playlists owned by fake users
     fake_usernames = USERNAMES + [f"user_{i}" for i in range(100)]
+    results["playlists"] = Playlist.query.filter(Playlist.owner_username.in_(fake_usernames)).delete(synchronize_session=False)
+
+    # Delete fake users (those in USERNAMES list or starting with "user_")
     results["users"] = User.query.filter(User.username.in_(fake_usernames)).delete(synchronize_session=False)
 
     db.session.commit()
@@ -399,8 +478,9 @@ def populate(
     owner: Annotated[str, typer.Option("--owner", "-o", help="Username of the video owner (ignored if --users > 0)")] = "admin",
     users: Annotated[int, typer.Option("--users", "-u", help="Number of fake users to create and assign videos to")] = 5,
     comments: Annotated[int, typer.Option("--comments", "-c", help="Number of fake comments to create")] = 50,
+    playlists: Annotated[int, typer.Option("--playlists", "-p", help="Number of fake playlists to create")] = 10,
 ) -> None:
-    """Populate the database with fake users, videos, and comments for testing."""
+    """Populate the database with fake users, videos, comments, and playlists for testing."""
     flask_app = create_app()
 
     with flask_app.app_context():
@@ -439,6 +519,16 @@ def populate(
                 fake_comments = create_fake_comments(videos, comment_users, comments)
                 typer.echo(f"  Created {len(fake_comments)} comments")
 
+        # Create playlists if users exist
+        if playlists > 0 and fake_users and len(videos) >= 2:
+            typer.echo(f"\nCreating {playlists} fake playlists...")
+            fake_playlists = create_fake_playlists(videos, fake_users, playlists)
+            typer.echo(f"  Created {len(fake_playlists)} playlists")
+            for playlist in fake_playlists[:3]:
+                typer.echo(f"    - {playlist.name} ({playlist.video_count()} videos) by {playlist.owner_username}")
+            if len(fake_playlists) > 3:
+                typer.echo(f"    ... and {len(fake_playlists) - 3} more")
+
         # Print statistics
         public_count = sum(1 for v in videos if v.visibility == VideoVisibility.PUBLIC.value)
         private_count = len(videos) - public_count
@@ -449,11 +539,13 @@ def populate(
         typer.echo(f"  Private videos: {private_count}")
         if comments > 0:
             typer.echo(f"  Comments: {comments}")
+        if playlists > 0 and fake_users:
+            typer.echo(f"  Playlists: {playlists}")
 
 
 @app.command()
 def clear() -> None:
-    """Clear all fake data (videos, users, comments) from the database."""
+    """Clear all fake data (videos, users, comments, playlists) from the database."""
     flask_app = create_app()
 
     with flask_app.app_context():
@@ -462,6 +554,7 @@ def clear() -> None:
         typer.echo(f"  Videos: {results['videos']}")
         typer.echo(f"  Users: {results['users']}")
         typer.echo(f"  Comments: {results['comments']}")
+        typer.echo(f"  Playlists: {results['playlists']}")
 
 
 if __name__ == "__main__":

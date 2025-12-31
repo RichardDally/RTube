@@ -2,7 +2,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 
-from rtube.models import db, Video, Comment, Favorite
+from rtube.models import db, Video, Comment, Favorite, Playlist
 from rtube.models_auth import User
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -142,11 +142,15 @@ def view_user_profile(username):
                 'video': video
             })
 
+    # Get user's playlists
+    playlists = Playlist.query.filter_by(owner_username=user.username).order_by(Playlist.updated_at.desc()).all()
+
     return render_template(
         'auth/profile.html',
         profile_user=user,
         videos=videos,
         comments_data=comments_data,
         favorites_data=favorites_data,
+        playlists=playlists,
         is_own_profile=is_own_profile
     )

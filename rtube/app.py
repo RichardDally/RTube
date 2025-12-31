@@ -51,7 +51,7 @@ def _log_configuration(app):
 
 migrate = Migrate()
 from rtube.models_auth import User, create_default_admin
-from rtube.routes import videos_bp, encoding_bp, admin_bp
+from rtube.routes import videos_bp, encoding_bp, admin_bp, playlists_bp
 from rtube.routes.auth import auth_bp
 from rtube.services.encoder import encoder_service
 
@@ -211,6 +211,7 @@ def create_app(test_config=None):
     app.register_blueprint(encoding_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(playlists_bp)
 
     # Update last_seen timestamp for logged-in users
     @app.before_request

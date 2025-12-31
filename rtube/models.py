@@ -93,3 +93,41 @@ class Favorite(db.Model):
     __table_args__ = (
         db.UniqueConstraint('username', 'video_id', name='unique_user_video_favorite'),
     )
+
+
+class Playlist(db.Model):
+    __tablename__ = "playlists"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.String(5000), nullable=True)
+    owner_username = db.Column(db.String(80), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    videos = db.relationship(
+        "PlaylistVideo",
+        backref="playlist",
+        lazy=True,
+        order_by="PlaylistVideo.position",
+        cascade="all, delete-orphan"
+    )
+
+    def video_count(self) -> int:
+        return len(self.videos)
+
+
+class PlaylistVideo(db.Model):
+    __tablename__ = "playlist_videos"
+
+    id = db.Column(db.Integer, primary_key=True)
+    playlist_id = db.Column(db.Integer, db.ForeignKey("playlists.id"), nullable=False)
+    video_id = db.Column(db.Integer, db.ForeignKey("videos.id"), nullable=False)
+    position = db.Column(db.Integer, nullable=False, default=0)
+    added_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    video = db.relationship("Video", backref=db.backref("playlist_entries", lazy=True))
+
+    __table_args__ = (
+        db.UniqueConstraint('playlist_id', 'video_id', name='unique_playlist_video'),
+    )
