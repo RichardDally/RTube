@@ -289,6 +289,21 @@
             .btn-delete-video:hover {
                 background-color: #a00000;
             }
+            .btn-edit-video {
+                padding: 8px 16px;
+                background-color: #444;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 13px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+                text-decoration: none;
+                display: inline-block;
+            }
+            .btn-edit-video:hover {
+                background-color: #555;
+            }
             .btn-share {
                 padding: 8px 16px;
                 background-color: #444;
@@ -511,6 +526,7 @@
             </div>
             {% if current_user.is_authenticated and video and (current_user.is_admin() or video.owner_username == current_user.username) %}
             <div class="video-actions">
+                <a href="{{ url_for('videos.edit_video', v=video.short_id) }}" class="btn-edit-video">Edit Video</a>
                 <form method="post" action="{{ url_for('videos.delete_video', v=video.short_id) }}" style="display: inline;">
                     <button type="submit" class="btn-delete-video" onclick="return confirm('Are you sure you want to delete this video? This action cannot be undone.')">Delete Video</button>
                 </form>

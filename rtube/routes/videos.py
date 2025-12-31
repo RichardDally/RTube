@@ -336,6 +336,54 @@ def edit_comment():
     return redirect(url_for('videos.watch_video', v=short_id))
 
 
+@videos_bp.route('/watch/edit', methods=['GET', 'POST'])
+@login_required
+def edit_video():
+    """Edit a video (owner or admin only)."""
+    short_id = request.args.get('v', '')
+    if not short_id:
+        return render_template(
+            '404.html',
+            title="Video not found",
+            message="No video ID was provided."
+        ), 404
+
+    video = Video.query.filter(db.func.lower(Video.short_id) == short_id.lower()).first()
+    if not video:
+        return render_template(
+            '404.html',
+            title="Video not found",
+            message=f"The video with ID '{short_id}' doesn't exist or has been removed."
+        ), 404
+
+    # Check permissions: owner can edit their own videos, admin can edit any
+    is_owner = video.owner_username == current_user.username
+    is_admin = current_user.is_admin()
+
+    if not is_owner and not is_admin:
+        abort(403)
+
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()[:255] or None
+        description = request.form.get('description', '').strip() or None
+        language = request.form.get('language', '').strip()[:10] or None
+        visibility = request.form.get('visibility', VideoVisibility.PUBLIC.value)
+
+        if visibility not in [VideoVisibility.PUBLIC.value, VideoVisibility.PRIVATE.value]:
+            visibility = VideoVisibility.PUBLIC.value
+
+        video.title = title
+        video.description = description
+        video.language = language
+        video.visibility = visibility
+        db.session.commit()
+
+        flash("Video updated successfully.", "success")
+        return redirect(url_for('videos.watch_video', v=short_id))
+
+    return render_template('videos/edit.html', video=video)
+
+
 @videos_bp.route('/watch/delete', methods=['POST'])
 @login_required
 def delete_video():
