@@ -3,7 +3,7 @@ from pathlib import Path
 from flask import Blueprint, render_template, current_app, flash, redirect, url_for, request, abort, send_from_directory
 from flask_login import current_user, login_required
 
-from rtube.models import db, Video, VideoVisibility, Comment, EncodingJob, Favorite
+from rtube.models import db, Video, VideoVisibility, Comment, EncodingJob, Favorite, PlaylistVideo
 
 logger = logging.getLogger(__name__)
 
@@ -368,6 +368,12 @@ def delete_video():
 
     # Delete associated comments
     Comment.query.filter_by(video_id=video.id).delete()
+
+    # Delete associated favorites
+    Favorite.query.filter_by(video_id=video.id).delete()
+
+    # Delete associated playlist entries
+    PlaylistVideo.query.filter_by(video_id=video.id).delete()
 
     # Delete associated encoding jobs
     EncodingJob.query.filter_by(video_id=video.id).delete()

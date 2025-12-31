@@ -67,8 +67,9 @@ def view(playlist_id):
     """View a playlist."""
     playlist = Playlist.query.get_or_404(playlist_id)
     is_owner = playlist.owner_username == current_user.username
+    can_delete = is_owner or current_user.is_admin()
 
-    return render_template('playlists/view.html', playlist=playlist, is_owner=is_owner)
+    return render_template('playlists/view.html', playlist=playlist, is_owner=is_owner, can_delete=can_delete)
 
 
 @playlists_bp.route('/<int:playlist_id>/edit', methods=['GET', 'POST'])
@@ -102,10 +103,11 @@ def edit(playlist_id):
 @playlists_bp.route('/<int:playlist_id>/delete', methods=['POST'])
 @login_required
 def delete(playlist_id):
-    """Delete a playlist."""
+    """Delete a playlist (owner or admin only)."""
     playlist = Playlist.query.get_or_404(playlist_id)
 
-    if playlist.owner_username != current_user.username:
+    is_owner = playlist.owner_username == current_user.username
+    if not is_owner and not current_user.is_admin():
         flash("You don't have permission to delete this playlist.", "error")
         return redirect(url_for('playlists.index'))
 

@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, abort, request, redirect, url_for,
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
-from rtube.models import db, Video, Comment
+from rtube.models import db, Video, Comment, Playlist, Favorite
 from rtube.models_auth import User
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,20 @@ def users():
         .all()
     )
 
+    # Get playlist counts per user
+    playlist_counts = dict(
+        db.session.query(Playlist.owner_username, func.count(Playlist.id))
+        .group_by(Playlist.owner_username)
+        .all()
+    )
+
+    # Get favorite counts per user
+    favorite_counts = dict(
+        db.session.query(Favorite.username, func.count(Favorite.id))
+        .group_by(Favorite.username)
+        .all()
+    )
+
     # Build user data with stats
     users_data = []
     for user in users_list:
@@ -51,6 +65,8 @@ def users():
             'user': user,
             'video_count': video_counts.get(user.username, 0),
             'comment_count': comment_counts.get(user.username, 0),
+            'playlist_count': playlist_counts.get(user.username, 0),
+            'favorite_count': favorite_counts.get(user.username, 0),
             'is_online': user.is_online(),
         })
 

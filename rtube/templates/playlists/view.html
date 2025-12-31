@@ -187,12 +187,16 @@
             {% if playlist.description %}
             <div class="playlist-description">{{ playlist.description }}</div>
             {% endif %}
-            {% if is_owner %}
+            {% if is_owner or can_delete %}
             <div class="playlist-actions">
+                {% if is_owner %}
                 <a href="{{ url_for('playlists.edit', playlist_id=playlist.id) }}" class="btn-edit">Edit</a>
+                {% endif %}
+                {% if can_delete %}
                 <form method="post" action="{{ url_for('playlists.delete', playlist_id=playlist.id) }}" style="display: inline;">
                     <button type="submit" class="btn-delete" onclick="return confirm('Delete this playlist?')">Delete</button>
                 </form>
+                {% endif %}
             </div>
             {% endif %}
         </div>

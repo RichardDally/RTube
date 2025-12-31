@@ -140,6 +140,10 @@
                 color: #4CAF50;
                 font-weight: bold;
                 font-size: 14px;
+                text-decoration: none;
+            }
+            .comment-author:hover {
+                text-decoration: underline;
             }
             .comment-date {
                 color: #888;
@@ -543,7 +547,7 @@
                 {% for comment in video.comments %}
                 <li class="comment-item" id="comment-{{ comment.id }}">
                     <div class="comment-header">
-                        <span class="comment-author">{{ comment.author_username }}</span>
+                        <a href="{{ url_for('auth.user_profile', username=comment.author_username) }}" class="comment-author">{{ comment.author_username }}</a>
                         <span class="comment-date">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
                         {% if current_user.is_authenticated and comment.author_username == current_user.username %}
                         <div class="comment-actions">

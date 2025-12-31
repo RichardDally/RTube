@@ -209,6 +209,8 @@
                     <th>Status</th>
                     <th>Videos</th>
                     <th>Comments</th>
+                    <th>Playlists</th>
+                    <th>Favorites</th>
                     <th>Created</th>
                     <th>Last Login</th>
                 </tr>
@@ -238,6 +240,12 @@
                     </td>
                     <td>
                         <span class="stat-count {{ 'highlight' if data.comment_count > 0 else '' }}">{{ data.comment_count }}</span>
+                    </td>
+                    <td>
+                        <span class="stat-count {{ 'highlight' if data.playlist_count > 0 else '' }}">{{ data.playlist_count }}</span>
+                    </td>
+                    <td>
+                        <span class="stat-count {{ 'highlight' if data.favorite_count > 0 else '' }}">{{ data.favorite_count }}</span>
                     </td>
                     <td class="date">{{ data.user.created_at.strftime('%Y-%m-%d') }}</td>
                     <td class="date">

@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from flask import current_app
 from rtube.app import create_app
-from rtube.models import db, Video, VideoVisibility, Comment, Playlist, PlaylistVideo
+from rtube.models import db, Video, VideoVisibility, Comment, Playlist, PlaylistVideo, Favorite
 from rtube.models_auth import User, UserRole
 
 app = typer.Typer(help="Populate database with fake videos for testing.")
@@ -384,6 +384,44 @@ def create_fake_playlists(videos: list[Video], users: list[User], count: int) ->
     return playlists
 
 
+def create_fake_favorites(videos: list[Video], users: list[User], count: int) -> list[Favorite]:
+    """Create fake favorites for random users on random videos."""
+    from datetime import datetime, timedelta
+
+    favorites = []
+    # Track existing favorites to avoid duplicates
+    existing_pairs = set()
+
+    for _ in range(count):
+        # Try to find a unique user-video pair
+        attempts = 0
+        while attempts < 50:
+            user = random.choice(users)
+            video = random.choice(videos)
+            pair = (user.username, video.id)
+
+            if pair not in existing_pairs:
+                existing_pairs.add(pair)
+
+                favorite = Favorite(
+                    username=user.username,
+                    video_id=video.id,
+                    created_at=datetime.utcnow() - timedelta(
+                        days=random.randint(0, 60),
+                        hours=random.randint(0, 23),
+                        minutes=random.randint(0, 59)
+                    )
+                )
+                db.session.add(favorite)
+                favorites.append(favorite)
+                break
+
+            attempts += 1
+
+    db.session.commit()
+    return favorites
+
+
 def create_fake_videos(count: int, owners: list[User] | str = "admin") -> list[Video]:
     """Create fake video records in the database and placeholder files.
 
@@ -438,10 +476,10 @@ def create_fake_videos(count: int, owners: list[User] | str = "admin") -> list[V
 
 
 def clear_fake_data() -> dict[str, int]:
-    """Remove all fake data (videos, users, comments, playlists)."""
-    results = {"videos": 0, "users": 0, "comments": 0, "playlists": 0}
+    """Remove all fake data (videos, users, comments, playlists, favorites)."""
+    results = {"videos": 0, "users": 0, "comments": 0, "playlists": 0, "favorites": 0}
 
-    # Get all fake videos to delete their files and associated comments
+    # Get all fake videos to delete their files and associated data
     fake_videos = Video.query.filter(Video.filename.like("fake_video_%")).all()
     fake_video_ids = [v.id for v in fake_videos]
 
@@ -452,6 +490,10 @@ def clear_fake_data() -> dict[str, int]:
     # Delete comments on fake videos
     if fake_video_ids:
         results["comments"] = Comment.query.filter(Comment.video_id.in_(fake_video_ids)).delete(synchronize_session=False)
+
+    # Delete favorites on fake videos
+    if fake_video_ids:
+        results["favorites"] = Favorite.query.filter(Favorite.video_id.in_(fake_video_ids)).delete(synchronize_session=False)
 
     # Delete placeholder files (m3u8 and thumbnails)
     for video in fake_videos:
@@ -464,6 +506,9 @@ def clear_fake_data() -> dict[str, int]:
     # Delete playlists owned by fake users
     fake_usernames = USERNAMES + [f"user_{i}" for i in range(100)]
     results["playlists"] = Playlist.query.filter(Playlist.owner_username.in_(fake_usernames)).delete(synchronize_session=False)
+
+    # Delete favorites by fake users
+    results["favorites"] += Favorite.query.filter(Favorite.username.in_(fake_usernames)).delete(synchronize_session=False)
 
     # Delete fake users (those in USERNAMES list or starting with "user_")
     results["users"] = User.query.filter(User.username.in_(fake_usernames)).delete(synchronize_session=False)
@@ -479,8 +524,9 @@ def populate(
     users: Annotated[int, typer.Option("--users", "-u", help="Number of fake users to create and assign videos to")] = 5,
     comments: Annotated[int, typer.Option("--comments", "-c", help="Number of fake comments to create")] = 50,
     playlists: Annotated[int, typer.Option("--playlists", "-p", help="Number of fake playlists to create")] = 10,
+    favorites: Annotated[int, typer.Option("--favorites", "-f", help="Number of fake favorites to create")] = 30,
 ) -> None:
-    """Populate the database with fake users, videos, comments, and playlists for testing."""
+    """Populate the database with fake users, videos, comments, playlists, and favorites for testing."""
     flask_app = create_app()
 
     with flask_app.app_context():
@@ -529,6 +575,12 @@ def populate(
             if len(fake_playlists) > 3:
                 typer.echo(f"    ... and {len(fake_playlists) - 3} more")
 
+        # Create favorites if users exist
+        if favorites > 0 and fake_users:
+            typer.echo(f"\nCreating {favorites} fake favorites...")
+            fake_favorites = create_fake_favorites(videos, fake_users, favorites)
+            typer.echo(f"  Created {len(fake_favorites)} favorites")
+
         # Print statistics
         public_count = sum(1 for v in videos if v.visibility == VideoVisibility.PUBLIC.value)
         private_count = len(videos) - public_count
@@ -541,11 +593,13 @@ def populate(
             typer.echo(f"  Comments: {comments}")
         if playlists > 0 and fake_users:
             typer.echo(f"  Playlists: {playlists}")
+        if favorites > 0 and fake_users:
+            typer.echo(f"  Favorites: {favorites}")
 
 
 @app.command()
 def clear() -> None:
-    """Clear all fake data (videos, users, comments, playlists) from the database."""
+    """Clear all fake data (videos, users, comments, playlists, favorites) from the database."""
     flask_app = create_app()
 
     with flask_app.app_context():
@@ -555,6 +609,7 @@ def clear() -> None:
         typer.echo(f"  Users: {results['users']}")
         typer.echo(f"  Comments: {results['comments']}")
         typer.echo(f"  Playlists: {results['playlists']}")
+        typer.echo(f"  Favorites: {results['favorites']}")
 
 
 if __name__ == "__main__":
