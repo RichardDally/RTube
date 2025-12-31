@@ -62,7 +62,70 @@ def index():
     # Show private videos only to authenticated users
     include_private = current_user.is_authenticated
     videos = get_available_videos(include_private=include_private)
+
+    # Handle search
+    query = request.args.get('q', '').strip()
+    if query:
+        return search_videos(query, include_private)
+
     return render_template('videos.html', videos=videos)
+
+
+def search_videos(query: str, include_private: bool = False):
+    """Search videos by title, description, or author."""
+    query_lower = query.lower()
+
+    # Build base query for videos
+    base_query = Video.query
+    if not include_private:
+        base_query = base_query.filter(Video.visibility != 'private')
+
+    # Search by title
+    by_title = base_query.filter(
+        db.func.lower(Video.title).contains(query_lower)
+    ).order_by(Video.created_at.desc()).all()
+
+    # Search by description
+    by_description = base_query.filter(
+        db.func.lower(Video.description).contains(query_lower)
+    ).order_by(Video.created_at.desc()).all()
+
+    # Search by author
+    by_author = base_query.filter(
+        db.func.lower(Video.owner_username).contains(query_lower)
+    ).order_by(Video.created_at.desc()).all()
+
+    # Remove duplicates while preserving categories
+    seen_ids = set()
+    results_by_title = []
+    for video in by_title:
+        if video.id not in seen_ids:
+            results_by_title.append(video)
+            seen_ids.add(video.id)
+
+    results_by_description = []
+    for video in by_description:
+        if video.id not in seen_ids:
+            results_by_description.append(video)
+            seen_ids.add(video.id)
+
+    results_by_author = []
+    for video in by_author:
+        if video.id not in seen_ids:
+            results_by_author.append(video)
+            seen_ids.add(video.id)
+
+    total_results = len(results_by_title) + len(results_by_description) + len(results_by_author)
+
+    return render_template(
+        'videos.html',
+        videos=None,
+        search_query=query,
+        results_by_title=results_by_title,
+        results_by_description=results_by_description,
+        results_by_author=results_by_author,
+        total_results=total_results
+    )
 
 
 @videos_bp.route('/watch/<path:invalid_path>')

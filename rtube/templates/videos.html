@@ -193,11 +193,81 @@
                 color: #81C784;
                 border: 1px solid #2E7D32;
             }
+            .search-form {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+            .search-input {
+                flex: 1;
+                padding: 10px 15px;
+                border: 1px solid #444;
+                border-radius: 5px;
+                background-color: #2a2a2a;
+                color: #fff;
+                font-size: 14px;
+            }
+            .search-input:focus {
+                outline: none;
+                border-color: #4CAF50;
+            }
+            .search-input::placeholder {
+                color: #888;
+            }
+            .btn-search {
+                padding: 10px 20px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 14px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .btn-search:hover {
+                background-color: #45a049;
+            }
+            .search-results-header {
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 1px solid #333;
+            }
+            .search-results-header h2 {
+                margin: 0 0 5px 0;
+                font-size: 18px;
+            }
+            .search-results-header p {
+                margin: 0;
+                color: #888;
+                font-size: 14px;
+            }
+            .search-category {
+                margin-bottom: 30px;
+            }
+            .search-category h3 {
+                color: #4CAF50;
+                font-size: 16px;
+                margin-bottom: 15px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid #333;
+            }
+            .btn-clear {
+                padding: 10px 20px;
+                background-color: #444;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size: 14px;
+                transition: background-color 0.2s;
+            }
+            .btn-clear:hover {
+                background-color: #555;
+            }
         </style>
     </head>
     <body>
         <div class="header">
-            <h1>RTube</h1>
+            <h1><a href="/" style="color: inherit; text-decoration: none;">RTube</a></h1>
             <div class="header-actions">
                 <div class="auth-links">
                     {% if current_user.is_authenticated %}
@@ -217,6 +287,14 @@
             </div>
         </div>
 
+        <form class="search-form" method="get" action="/">
+            <input type="text" name="q" class="search-input" placeholder="Search by title, description or author..." value="{{ search_query or '' }}">
+            <button type="submit" class="btn-search">Search</button>
+            {% if search_query %}
+            <a href="/" class="btn-clear">Clear</a>
+            {% endif %}
+        </form>
+
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         <div class="flash-messages">
@@ -227,7 +305,128 @@
         {% endif %}
         {% endwith %}
 
-        {% if videos %}
+        {% if search_query %}
+        <div class="search-results-header">
+            <h2>Search results for "{{ search_query }}"</h2>
+            <p>{{ total_results }} result{{ 's' if total_results != 1 else '' }} found</p>
+        </div>
+
+        {% if total_results > 0 %}
+            {% if results_by_title %}
+            <div class="search-category">
+                <h3>By title ({{ results_by_title | length }})</h3>
+                <ul class="video-list">
+                    {% for video in results_by_title %}
+                    <li>
+                        <a href="/watch?v={{ video.short_id }}">
+                            {% if video.thumbnail %}
+                            <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
+                            {% else %}
+                            <div class="thumbnail"></div>
+                            {% endif %}
+                            <div class="video-info">
+                                <span class="video-title">{{ video.title or video.filename }}</span>
+                                <div class="video-meta">
+                                    <span class="view-count">{{ video.view_count }} view{{ 's' if video.view_count != 1 else '' }}</span>
+                                    {% if video.language %}
+                                    <span class="language-badge">{{ video.language }}</span>
+                                    {% endif %}
+                                    {% if video.visibility == 'private' %}
+                                    <span class="private-badge">Private</span>
+                                    {% endif %}
+                                </div>
+                                {% if video.description %}
+                                <span class="video-description">{{ video.description }}</span>
+                                {% endif %}
+                            </div>
+                            {% if video.owner_username %}
+                            <span class="video-owner">{{ video.owner_username }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if results_by_description %}
+            <div class="search-category">
+                <h3>By description ({{ results_by_description | length }})</h3>
+                <ul class="video-list">
+                    {% for video in results_by_description %}
+                    <li>
+                        <a href="/watch?v={{ video.short_id }}">
+                            {% if video.thumbnail %}
+                            <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
+                            {% else %}
+                            <div class="thumbnail"></div>
+                            {% endif %}
+                            <div class="video-info">
+                                <span class="video-title">{{ video.title or video.filename }}</span>
+                                <div class="video-meta">
+                                    <span class="view-count">{{ video.view_count }} view{{ 's' if video.view_count != 1 else '' }}</span>
+                                    {% if video.language %}
+                                    <span class="language-badge">{{ video.language }}</span>
+                                    {% endif %}
+                                    {% if video.visibility == 'private' %}
+                                    <span class="private-badge">Private</span>
+                                    {% endif %}
+                                </div>
+                                {% if video.description %}
+                                <span class="video-description">{{ video.description }}</span>
+                                {% endif %}
+                            </div>
+                            {% if video.owner_username %}
+                            <span class="video-owner">{{ video.owner_username }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if results_by_author %}
+            <div class="search-category">
+                <h3>By author ({{ results_by_author | length }})</h3>
+                <ul class="video-list">
+                    {% for video in results_by_author %}
+                    <li>
+                        <a href="/watch?v={{ video.short_id }}">
+                            {% if video.thumbnail %}
+                            <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
+                            {% else %}
+                            <div class="thumbnail"></div>
+                            {% endif %}
+                            <div class="video-info">
+                                <span class="video-title">{{ video.title or video.filename }}</span>
+                                <div class="video-meta">
+                                    <span class="view-count">{{ video.view_count }} view{{ 's' if video.view_count != 1 else '' }}</span>
+                                    {% if video.language %}
+                                    <span class="language-badge">{{ video.language }}</span>
+                                    {% endif %}
+                                    {% if video.visibility == 'private' %}
+                                    <span class="private-badge">Private</span>
+                                    {% endif %}
+                                </div>
+                                {% if video.description %}
+                                <span class="video-description">{{ video.description }}</span>
+                                {% endif %}
+                            </div>
+                            {% if video.owner_username %}
+                            <span class="video-owner">{{ video.owner_username }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        {% else %}
+        <p class="empty-message">No videos found matching your search.</p>
+        {% endif %}
+
+        {% elif videos %}
         <ul class="video-list">
             {% for video in videos %}
             <li>

@@ -186,9 +186,7 @@
             <div class="stats">
                 <span class="stat"><span class="stat-value">{{ videos | length }}</span> video{{ 's' if videos | length != 1 else '' }}</span>
                 <span class="stat"><span class="stat-value">{{ comments_data | length }}</span> comment{{ 's' if comments_data | length != 1 else '' }}</span>
-                {% if is_own_profile %}
                 <span class="stat"><span class="stat-value">{{ favorites_data | length }}</span> favorite{{ 's' if favorites_data | length != 1 else '' }}</span>
-                {% endif %}
             </div>
         </div>
 
@@ -248,7 +246,6 @@
             {% endif %}
         </div>
 
-        {% if is_own_profile %}
         <div class="section">
             <h2 class="section-title">Favorites</h2>
             {% if favorites_data %}
@@ -278,10 +275,9 @@
                 {% endfor %}
             </ul>
             {% else %}
-            <p class="empty-message">No favorites yet. Add videos to your favorites while watching them!</p>
+            <p class="empty-message">No favorites yet.</p>
             {% endif %}
         </div>
-        {% endif %}
 
         <footer>RTube v{{ rtube_version }}</footer>
     </body>

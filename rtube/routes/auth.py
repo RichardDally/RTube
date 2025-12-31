@@ -1,12 +1,9 @@
-import logging
 from datetime import datetime
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 
 from rtube.models import db, Video, Comment, Favorite
 from rtube.models_auth import User
-
-logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -29,14 +26,14 @@ def login():
             user.last_login = datetime.utcnow()
             db.session.commit()
             login_user(user)
-            logger.info(f"User '{username}' logged in successfully")
+            current_app.logger.info(f"User '{username}' logged in successfully")
 
             next_page = request.args.get('next')
             if next_page:
                 return redirect(next_page)
             return redirect(url_for('videos.index'))
 
-        logger.warning(f"Failed login attempt for username '{username}'")
+        current_app.logger.warning(f"Failed login attempt for username '{username}'")
         return render_template('auth/login.html', error="Invalid username or password")
 
     return render_template('auth/login.html')
@@ -77,7 +74,7 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        logger.info(f"New user '{username}' registered successfully")
+        current_app.logger.info(f"New user '{username}' registered successfully")
         flash("Account created successfully. Please log in.", "success")
         return redirect(url_for('auth.login'))
 
@@ -89,7 +86,7 @@ def register():
 def logout():
     username = current_user.username
     logout_user()
-    logger.info(f"User '{username}' logged out")
+    current_app.logger.info(f"User '{username}' logged out")
     return redirect(url_for('videos.index'))
 
 
@@ -133,18 +130,17 @@ def view_user_profile(username):
             'video': video
         })
 
-    # Get user's favorites (only visible to the user themselves)
+    # Get user's favorites (visible to all authenticated users)
     favorites_data = []
-    is_own_profile = current_user.is_authenticated and current_user.username == username
-    if is_own_profile:
-        favorites = Favorite.query.filter_by(username=username).order_by(Favorite.created_at.desc()).all()
-        for favorite in favorites:
-            video = db.session.get(Video, favorite.video_id)
-            if video:  # Video might have been deleted
-                favorites_data.append({
-                    'favorite': favorite,
-                    'video': video
-                })
+    is_own_profile = current_user.is_authenticated and current_user.username == user.username
+    favorites = Favorite.query.filter_by(username=user.username).order_by(Favorite.created_at.desc()).all()
+    for favorite in favorites:
+        video = db.session.get(Video, favorite.video_id)
+        if video:  # Video might have been deleted
+            favorites_data.append({
+                'favorite': favorite,
+                'video': video
+            })
 
     return render_template(
         'auth/profile.html',
