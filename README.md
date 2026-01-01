@@ -170,6 +170,69 @@ export RTUBE_LDAP_USERNAME_ATTRIBUTE="sAMAccountName"
 4. On successful authentication, a local user record is created (if first login)
 5. The user is logged in with the `uploader` role
 
+### SSO Authentication (OIDC / SAML)
+
+RTube supports Single Sign-On via OpenID Connect (OIDC) and SAML 2.0 protocols. These can be enabled alongside local and LDAP authentication.
+
+#### OIDC Configuration (Keycloak, Azure AD, Okta, etc.)
+
+```bash
+export RTUBE_OIDC_ENABLED=true
+export RTUBE_OIDC_CLIENT_ID="your-client-id"
+export RTUBE_OIDC_CLIENT_SECRET="your-client-secret"
+export RTUBE_OIDC_DISCOVERY_URL="https://idp.example.com/.well-known/openid-configuration"
+export RTUBE_OIDC_SCOPES="openid profile email"
+export RTUBE_OIDC_USERNAME_CLAIM="preferred_username"
+```
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `RTUBE_OIDC_ENABLED` | Enable OIDC authentication | `false` |
+| `RTUBE_OIDC_CLIENT_ID` | OAuth2 client ID | - |
+| `RTUBE_OIDC_CLIENT_SECRET` | OAuth2 client secret | - |
+| `RTUBE_OIDC_DISCOVERY_URL` | OIDC discovery endpoint URL | - |
+| `RTUBE_OIDC_SCOPES` | Space-separated OAuth2 scopes | `openid profile email` |
+| `RTUBE_OIDC_USERNAME_CLAIM` | Claim to use for username | `preferred_username` |
+
+**Callback URL**: Configure your IdP with the callback URL: `https://your-rtube-domain/auth/oidc/callback`
+
+#### SAML 2.0 Configuration (ADFS, Okta, Shibboleth, etc.)
+
+```bash
+export RTUBE_SAML_ENABLED=true
+export RTUBE_SAML_IDP_ENTITY_ID="https://idp.example.com"
+export RTUBE_SAML_IDP_SSO_URL="https://idp.example.com/sso"
+export RTUBE_SAML_IDP_CERT_FILE="/path/to/idp-cert.pem"
+export RTUBE_SAML_SP_ENTITY_ID="https://rtube.example.com"
+export RTUBE_SAML_USERNAME_ATTRIBUTE="uid"
+```
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `RTUBE_SAML_ENABLED` | Enable SAML authentication | `false` |
+| `RTUBE_SAML_IDP_ENTITY_ID` | IdP Entity ID | - |
+| `RTUBE_SAML_IDP_SSO_URL` | IdP Single Sign-On URL | - |
+| `RTUBE_SAML_IDP_CERT_FILE` | Path to IdP certificate file | - |
+| `RTUBE_SAML_IDP_CERT` | IdP certificate (alternative to file) | - |
+| `RTUBE_SAML_SP_ENTITY_ID` | Service Provider Entity ID | Auto-generated |
+| `RTUBE_SAML_USERNAME_ATTRIBUTE` | SAML attribute for username | `uid` |
+| `RTUBE_SAML_EMAIL_ATTRIBUTE` | SAML attribute for email | `email` |
+| `RTUBE_SAML_NAME_ATTRIBUTE` | SAML attribute for display name | `displayName` |
+
+**Service Provider Metadata**: Available at `https://your-rtube-domain/auth/saml/metadata`
+
+**Assertion Consumer Service URL**: `https://your-rtube-domain/auth/saml/acs`
+
+#### How SSO Works
+
+1. User clicks "Sign in with SSO" on the login page
+2. User is redirected to the Identity Provider (IdP)
+3. After successful authentication, IdP redirects back to RTube
+4. RTube creates a local user account on first login (with `uploader` role)
+5. User is logged in
+
+SSO users cannot change their password in RTube - authentication is managed by the IdP.
+
 ### Password Requirements
 
 - Minimum 12 characters
@@ -213,6 +276,18 @@ sqlite3 instance/rtube_auth.db "ALTER TABLE users ADD COLUMN auth_type VARCHAR(1
 PostgreSQL:
 ```sql
 ALTER TABLE users ADD COLUMN auth_type VARCHAR(10) NOT NULL DEFAULT 'local';
+```
+
+**For SSO support (adding `sso_subject` column):**
+
+SQLite:
+```bash
+sqlite3 instance/rtube_auth.db "ALTER TABLE users ADD COLUMN sso_subject VARCHAR(255);"
+```
+
+PostgreSQL:
+```sql
+ALTER TABLE users ADD COLUMN sso_subject VARCHAR(255);
 ```
 
 ### Creating New Migrations

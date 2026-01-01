@@ -103,6 +103,56 @@
             .back-link:hover {
                 color: #fff;
             }
+            .sso-divider {
+                display: flex;
+                align-items: center;
+                text-align: center;
+                margin: 25px 0;
+                color: #888;
+            }
+            .sso-divider::before,
+            .sso-divider::after {
+                content: '';
+                flex: 1;
+                border-bottom: 1px solid #444;
+            }
+            .sso-divider span {
+                padding: 0 15px;
+            }
+            .sso-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+            .sso-button {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 12px 20px;
+                border-radius: 5px;
+                text-decoration: none;
+                font-size: 14px;
+                font-weight: bold;
+                transition: background-color 0.2s, transform 0.1s;
+            }
+            .sso-button:hover {
+                transform: translateY(-1px);
+            }
+            .sso-button.oidc {
+                background-color: #5865F2;
+                color: white;
+            }
+            .sso-button.oidc:hover {
+                background-color: #4752c4;
+            }
+            .sso-button.saml {
+                background-color: #FF6B35;
+                color: white;
+            }
+            .sso-button.saml:hover {
+                background-color: #e55a2b;
+            }
         </style>
     </head>
     <body>
@@ -120,6 +170,22 @@
                     {% endfor %}
                 {% endif %}
             {% endwith %}
+
+            {% if oidc_enabled or saml_enabled %}
+            <div class="sso-buttons">
+                {% if oidc_enabled %}
+                <a href="{{ url_for('auth.oidc_login') }}" class="sso-button oidc">
+                    Sign in with SSO (OIDC)
+                </a>
+                {% endif %}
+                {% if saml_enabled %}
+                <a href="{{ url_for('auth.saml_login') }}" class="sso-button saml">
+                    Sign in with SSO (SAML)
+                </a>
+                {% endif %}
+            </div>
+            <div class="sso-divider"><span>or continue with credentials</span></div>
+            {% endif %}
 
             {% if ldap_enabled %}
             <div class="info" style="background-color: #2196F3; color: white; padding: 10px; border-radius: 5px; margin-bottom: 20px; text-align: center;">

@@ -17,6 +17,8 @@ from rtube.routes import videos_bp, encoding_bp, admin_bp, playlists_bp
 from rtube.routes.auth import auth_bp
 from rtube.services.encoder import encoder_service
 from rtube.services.ldap_auth import LDAPAuthService, LDAPConfig
+from rtube.services.oidc_auth import OIDCAuthService, OIDCConfig
+from rtube.services.saml_auth import SAMLAuthService, SAMLConfig
 
 # Keys that contain sensitive information and should be redacted in logs
 SENSITIVE_KEYS = {'SECRET_KEY', 'PASSWORD', 'TOKEN', 'API_KEY', 'DATABASE_URL', 'SQLALCHEMY_DATABASE_URI'}
@@ -54,6 +56,8 @@ def _log_configuration(app):
     app.logger.info(f"  LDAP enabled: {app.config.get('LDAP_ENABLED', False)}")
     if app.config.get('LDAP_ENABLED'):
         app.logger.info(f"  LDAP server: {app.config.get('LDAP_SERVER')}")
+    app.logger.info(f"  OIDC enabled: {app.config.get('OIDC_ENABLED', False)}")
+    app.logger.info(f"  SAML enabled: {app.config.get('SAML_ENABLED', False)}")
     app.logger.info("=" * 60)
 
 
@@ -185,6 +189,24 @@ def create_app(test_config=None):
         app.config["LDAP_ENABLED"] = False
         app.config["LDAP_SERVICE"] = None
 
+    # OIDC configuration
+    oidc_config = OIDCConfig.from_env(os.environ)
+    if oidc_config:
+        app.config["OIDC_ENABLED"] = True
+        app.config["OIDC_SERVICE"] = OIDCAuthService(oidc_config)
+    else:
+        app.config["OIDC_ENABLED"] = False
+        app.config["OIDC_SERVICE"] = None
+
+    # SAML configuration
+    saml_config = SAMLConfig.from_env(os.environ)
+    if saml_config:
+        app.config["SAML_ENABLED"] = True
+        app.config["SAML_SERVICE"] = SAMLAuthService(saml_config)
+    else:
+        app.config["SAML_ENABLED"] = False
+        app.config["SAML_SERVICE"] = None
+
     # Media storage paths (within instance folder)
     app.config["VIDEOS_FOLDER"] = str(Path(app.instance_path) / "videos")
     app.config["THUMBNAILS_FOLDER"] = str(Path(app.instance_path) / "thumbnails")
@@ -234,13 +256,15 @@ def create_app(test_config=None):
             current_user.last_seen = datetime.utcnow()
             db.session.commit()
 
-    # Inject version and LDAP status into all templates
+    # Inject version and auth status into all templates
     @app.context_processor
     def inject_globals():
         import rtube
         return {
             "rtube_version": rtube.__version__,
             "ldap_enabled": app.config.get("LDAP_ENABLED", False),
+            "oidc_enabled": app.config.get("OIDC_ENABLED", False),
+            "saml_enabled": app.config.get("SAML_ENABLED", False),
         }
 
     # Custom Jinja2 filter to convert URLs to clickable links
