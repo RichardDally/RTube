@@ -1,5 +1,4 @@
 """Tests for admin routes."""
-import pytest
 from datetime import datetime, timedelta
 
 from rtube.models import db, Video, Comment

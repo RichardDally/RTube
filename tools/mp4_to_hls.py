@@ -1,10 +1,11 @@
 import sys
 import datetime
-import ffmpeg_streaming
 import logging
 
-logger = logging.getLogger(__name__)
+import ffmpeg_streaming
 from ffmpeg_streaming import Formats, Representation, Size, Bitrate
+
+logger = logging.getLogger(__name__)
 
 
 _144p = Representation(Size(256, 144), Bitrate(95 * 1024, 64 * 1024))

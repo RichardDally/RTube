@@ -1,1 +1,1 @@
-from rtube.services.encoder import EncoderService
+from rtube.services.encoder import EncoderService as EncoderService

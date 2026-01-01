@@ -9,7 +9,7 @@ import pytest
 os.environ["TESTING"] = "true"
 
 from rtube.app import create_app
-from rtube.models import db, Video, EncodingJob, Comment
+from rtube.models import db, Video
 from rtube.models_auth import User, UserRole
 
 

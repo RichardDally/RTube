@@ -584,7 +584,7 @@ def populate(
         # Print statistics
         public_count = sum(1 for v in videos if v.visibility == VideoVisibility.PUBLIC.value)
         private_count = len(videos) - public_count
-        typer.echo(f"\nStatistics:")
+        typer.echo("\nStatistics:")
         if fake_users:
             typer.echo(f"  Users: {len(fake_users)}")
         typer.echo(f"  Public videos: {public_count}")

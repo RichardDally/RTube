@@ -1,7 +1,6 @@
 """
 Tests for authentication routes.
 """
-import pytest
 from rtube.models import db, Video, Comment
 from rtube.models_auth import User, UserRole
 

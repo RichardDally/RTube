@@ -3,7 +3,6 @@ import logging
 from pathlib import Path
 from flask import Blueprint, render_template, request, redirect, url_for, current_app, Response
 from flask_login import login_required, current_user
-from werkzeug.utils import secure_filename
 
 from rtube.models import db, Video, EncodingJob
 from rtube.services.encoder import encoder_service

@@ -1,7 +1,6 @@
 """
 Tests for video routes.
 """
-import pytest
 from rtube.models import db, Video, Comment, Favorite
 
 
@@ -131,7 +130,7 @@ class TestCommentRoute:
 
     def test_post_comment_success(self, authenticated_client, sample_video, app):
         """Test successfully posting a comment."""
-        response = authenticated_client.post(
+        authenticated_client.post(
             f'/watch/comment?v={sample_video["short_id"]}',
             data={'content': 'This is a test comment!'},
             follow_redirects=True
@@ -147,7 +146,7 @@ class TestCommentRoute:
 
     def test_post_empty_comment(self, authenticated_client, sample_video, app):
         """Test posting an empty comment fails."""
-        response = authenticated_client.post(
+        authenticated_client.post(
             f'/watch/comment?v={sample_video["short_id"]}',
             data={'content': ''},
             follow_redirects=True
@@ -161,7 +160,7 @@ class TestCommentRoute:
 
     def test_post_comment_whitespace_only(self, authenticated_client, sample_video, app):
         """Test posting whitespace-only comment fails."""
-        response = authenticated_client.post(
+        authenticated_client.post(
             f'/watch/comment?v={sample_video["short_id"]}',
             data={'content': '   \n\t   '},
             follow_redirects=True
@@ -177,7 +176,7 @@ class TestCommentRoute:
         """Test that comments are truncated to 5000 characters."""
         long_content = 'x' * 6000
 
-        response = authenticated_client.post(
+        authenticated_client.post(
             f'/watch/comment?v={sample_video["short_id"]}',
             data={'content': long_content},
             follow_redirects=True
@@ -248,7 +247,7 @@ class TestDeleteCommentRoute:
             db.session.commit()
             comment_id = comment.id
 
-        response = authenticated_client.post(
+        authenticated_client.post(
             f'/watch/comment/delete?v={sample_video["short_id"]}',
             data={'comment_id': comment_id},
             follow_redirects=True
@@ -273,7 +272,7 @@ class TestDeleteCommentRoute:
             db.session.commit()
             comment_id = comment.id
 
-        response = authenticated_client.post(
+        authenticated_client.post(
             f'/watch/comment/delete?v={sample_video["short_id"]}',
             data={'comment_id': comment_id},
             follow_redirects=True
@@ -298,7 +297,7 @@ class TestDeleteCommentRoute:
             db.session.commit()
             comment_id = comment.id
 
-        response = admin_client.post(
+        admin_client.post(
             f'/watch/comment/delete?v={sample_video["short_id"]}',
             data={'comment_id': comment_id},
             follow_redirects=True
@@ -368,7 +367,7 @@ class TestEditCommentRoute:
             db.session.commit()
             comment_id = comment.id
 
-        response = authenticated_client.post(
+        authenticated_client.post(
             f'/watch/comment/edit?v={sample_video["short_id"]}',
             data={'comment_id': comment_id, 'content': 'Edited comment'},
             follow_redirects=True
@@ -391,7 +390,7 @@ class TestEditCommentRoute:
             db.session.commit()
             comment_id = comment.id
 
-        response = authenticated_client.post(
+        authenticated_client.post(
             f'/watch/comment/edit?v={sample_video["short_id"]}',
             data={'comment_id': comment_id, 'content': 'Edited comment'},
             follow_redirects=True
@@ -414,7 +413,7 @@ class TestEditCommentRoute:
             db.session.commit()
             comment_id = comment.id
 
-        response = admin_client.post(
+        admin_client.post(
             f'/watch/comment/edit?v={sample_video["short_id"]}',
             data={'comment_id': comment_id, 'content': 'Edited by admin'},
             follow_redirects=True
@@ -437,7 +436,7 @@ class TestEditCommentRoute:
             db.session.commit()
             comment_id = comment.id
 
-        response = authenticated_client.post(
+        authenticated_client.post(
             f'/watch/comment/edit?v={sample_video["short_id"]}',
             data={'comment_id': comment_id, 'content': ''},
             follow_redirects=True
@@ -461,7 +460,7 @@ class TestEditCommentRoute:
             comment_id = comment.id
 
         long_content = 'x' * 6000
-        response = authenticated_client.post(
+        authenticated_client.post(
             f'/watch/comment/edit?v={sample_video["short_id"]}',
             data={'comment_id': comment_id, 'content': long_content},
             follow_redirects=True
@@ -883,8 +882,8 @@ class TestFavoriteRoutes:
         assert b'Favorites' in response.data
         assert sample_video['title'].encode() in response.data
 
-    def test_favorites_hidden_in_other_profile(self, authenticated_client, app):
-        """Test that favorites are not shown in other users' profiles."""
+    def test_favorites_visible_in_other_profile(self, authenticated_client, app):
+        """Test that favorites are shown in other users' profiles for authenticated users."""
         from rtube.models_auth import User
         # Create another user with a favorite
         with app.app_context():
@@ -908,5 +907,6 @@ class TestFavoriteRoutes:
 
         response = authenticated_client.get('/auth/profile/otheruser_fav')
         assert response.status_code == 200
-        # Favorites section should not be visible in other users' profiles
-        assert b'Favorites' not in response.data
+        # Favorites section should be visible in other users' profiles for authenticated users
+        assert b'Favorites' in response.data
+        assert b"Other&#39;s Video" in response.data

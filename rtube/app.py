@@ -12,6 +12,10 @@ from flask_session import Session
 from markupsafe import Markup, escape
 
 from rtube.models import db
+from rtube.models_auth import User, create_default_admin
+from rtube.routes import videos_bp, encoding_bp, admin_bp, playlists_bp
+from rtube.routes.auth import auth_bp
+from rtube.services.encoder import encoder_service
 
 # Keys that contain sensitive information and should be redacted in logs
 SENSITIVE_KEYS = {'SECRET_KEY', 'PASSWORD', 'TOKEN', 'API_KEY', 'DATABASE_URL', 'SQLALCHEMY_DATABASE_URI'}
@@ -50,10 +54,6 @@ def _log_configuration(app):
 
 
 migrate = Migrate()
-from rtube.models_auth import User, create_default_admin
-from rtube.routes import videos_bp, encoding_bp, admin_bp, playlists_bp
-from rtube.routes.auth import auth_bp
-from rtube.services.encoder import encoder_service
 
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'

@@ -8,7 +8,7 @@ from threading import Thread
 import ffmpeg_streaming
 from ffmpeg_streaming import Formats, Representation, Size, Bitrate
 
-from rtube.models import db, EncodingJob, Video
+from rtube.models import db, EncodingJob
 
 logger = logging.getLogger(__name__)
 

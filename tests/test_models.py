@@ -1,7 +1,6 @@
 """
 Tests for RTube database models.
 """
-import pytest
 from rtube.models import db, Video, VideoVisibility, Comment, generate_unique_short_id
 from rtube.models_auth import User, UserRole
 
