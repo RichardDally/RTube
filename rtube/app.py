@@ -16,6 +16,7 @@ from rtube.models_auth import User, create_default_admin
 from rtube.routes import videos_bp, encoding_bp, admin_bp, playlists_bp
 from rtube.routes.auth import auth_bp
 from rtube.services.encoder import encoder_service
+from rtube.services.ldap_auth import LDAPAuthService, LDAPConfig
 
 # Keys that contain sensitive information and should be redacted in logs
 SENSITIVE_KEYS = {'SECRET_KEY', 'PASSWORD', 'TOKEN', 'API_KEY', 'DATABASE_URL', 'SQLALCHEMY_DATABASE_URI'}
@@ -50,6 +51,9 @@ def _log_configuration(app):
     app.logger.info(f"  Session cookie secure: {app.config.get('SESSION_COOKIE_SECURE')}")
     app.logger.info(f"  Keep original video: {app.config.get('KEEP_ORIGINAL_VIDEO')}")
     app.logger.info(f"  Max upload size: {app.config.get('MAX_CONTENT_LENGTH', 0) / (1024 * 1024 * 1024):.1f} GB")
+    app.logger.info(f"  LDAP enabled: {app.config.get('LDAP_ENABLED', False)}")
+    if app.config.get('LDAP_ENABLED'):
+        app.logger.info(f"  LDAP server: {app.config.get('LDAP_SERVER')}")
     app.logger.info("=" * 60)
 
 
@@ -171,6 +175,16 @@ def create_app(test_config=None):
     # Encoding configuration
     app.config["KEEP_ORIGINAL_VIDEO"] = os.environ.get("RTUBE_KEEP_ORIGINAL_VIDEO", "").lower() in ("true", "1", "yes")
 
+    # LDAP configuration
+    ldap_config = LDAPConfig.from_env(os.environ)
+    if ldap_config:
+        app.config["LDAP_ENABLED"] = True
+        app.config["LDAP_SERVER"] = ldap_config.server
+        app.config["LDAP_SERVICE"] = LDAPAuthService(ldap_config)
+    else:
+        app.config["LDAP_ENABLED"] = False
+        app.config["LDAP_SERVICE"] = None
+
     # Media storage paths (within instance folder)
     app.config["VIDEOS_FOLDER"] = str(Path(app.instance_path) / "videos")
     app.config["THUMBNAILS_FOLDER"] = str(Path(app.instance_path) / "thumbnails")
@@ -220,11 +234,14 @@ def create_app(test_config=None):
             current_user.last_seen = datetime.utcnow()
             db.session.commit()
 
-    # Inject version into all templates
+    # Inject version and LDAP status into all templates
     @app.context_processor
-    def inject_version():
+    def inject_globals():
         import rtube
-        return {"rtube_version": rtube.__version__}
+        return {
+            "rtube_version": rtube.__version__,
+            "ldap_enabled": app.config.get("LDAP_ENABLED", False),
+        }
 
     # Custom Jinja2 filter to convert URLs to clickable links
     @app.template_filter('urlize')

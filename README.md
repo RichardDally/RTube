@@ -78,6 +78,14 @@ Each video page includes a share button that copies the current URL to the clipb
 | `RTUBE_HTTPS` | Enable secure session cookies (`true`, `1`, or `yes` when using HTTPS) | `false` |
 | `RTUBE_KEEP_ORIGINAL_VIDEO` | Keep original MP4 file after encoding (`true`, `1`, or `yes` to enable) | `false` |
 | `RTUBE_INSTANCE_PATH` | Custom path for instance folder (sessions, secret key). Must be an absolute path. | `instance/` |
+| `RTUBE_LDAP_ENABLED` | Enable LDAP authentication (`true`, `1`, or `yes`) | `false` |
+| `RTUBE_LDAP_SERVER` | LDAP server URL | `ldap://localhost:389` |
+| `RTUBE_LDAP_USE_SSL` | Use SSL/TLS for LDAP connection | `false` |
+| `RTUBE_LDAP_BIND_DN` | DN for LDAP bind (service account) | - |
+| `RTUBE_LDAP_BIND_PASSWORD` | Password for LDAP bind | - |
+| `RTUBE_LDAP_USER_BASE` | Base DN for user search | - |
+| `RTUBE_LDAP_USER_FILTER` | LDAP filter for user search | `(uid={username})` |
+| `RTUBE_LDAP_USERNAME_ATTRIBUTE` | LDAP attribute containing username | `uid` |
 
 ## Authentication
 
@@ -123,6 +131,45 @@ On first startup, a default admin account is created:
 
 **Important**: Change this password immediately in production!
 
+### LDAP Authentication
+
+RTube supports LDAP authentication as an alternative to local accounts. When LDAP is enabled:
+
+- All users authenticate via LDAP (except the local `admin` account)
+- User accounts are auto-created on first LDAP login
+- Local registration is disabled
+- The local `admin` account can still login with its password (fallback for emergencies)
+
+#### Configuration Example
+
+```bash
+export RTUBE_LDAP_ENABLED=true
+export RTUBE_LDAP_SERVER=ldap://ldap.example.com:389
+export RTUBE_LDAP_BIND_DN="cn=readonly,dc=example,dc=com"
+export RTUBE_LDAP_BIND_PASSWORD="secret"
+export RTUBE_LDAP_USER_BASE="ou=users,dc=example,dc=com"
+export RTUBE_LDAP_USER_FILTER="(uid={username})"
+export RTUBE_LDAP_USERNAME_ATTRIBUTE="uid"
+```
+
+#### For Active Directory
+
+```bash
+export RTUBE_LDAP_SERVER=ldap://ad.example.com:389
+export RTUBE_LDAP_BIND_DN="CN=Service Account,OU=Service Accounts,DC=example,DC=com"
+export RTUBE_LDAP_USER_BASE="OU=Users,DC=example,DC=com"
+export RTUBE_LDAP_USER_FILTER="(sAMAccountName={username})"
+export RTUBE_LDAP_USERNAME_ATTRIBUTE="sAMAccountName"
+```
+
+#### How it Works
+
+1. User enters LDAP credentials on the login page
+2. RTube searches for the user in LDAP using the configured filter
+3. If found, RTube attempts to bind with the user's DN and password
+4. On successful authentication, a local user record is created (if first login)
+5. The user is logged in with the `uploader` role
+
 ### Password Requirements
 
 - Minimum 12 characters
@@ -150,6 +197,22 @@ After pulling new changes that include database migrations:
 
 ```bash
 flask --app rtube.app:create_app db upgrade
+```
+
+### Auth Database Migrations
+
+The `users` table is stored in a separate auth database (`rtube_auth.db` or PostgreSQL). Flask-Migrate only manages the main database, so auth schema changes must be applied manually.
+
+**For LDAP support (adding `auth_type` column):**
+
+SQLite:
+```bash
+sqlite3 instance/rtube_auth.db "ALTER TABLE users ADD COLUMN auth_type VARCHAR(10) NOT NULL DEFAULT 'local';"
+```
+
+PostgreSQL:
+```sql
+ALTER TABLE users ADD COLUMN auth_type VARCHAR(10) NOT NULL DEFAULT 'local';
 ```
 
 ### Creating New Migrations

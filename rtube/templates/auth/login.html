@@ -121,6 +121,12 @@
                 {% endif %}
             {% endwith %}
 
+            {% if ldap_enabled %}
+            <div class="info" style="background-color: #2196F3; color: white; padding: 10px; border-radius: 5px; margin-bottom: 20px; text-align: center;">
+                Use your LDAP credentials to login
+            </div>
+            {% endif %}
+
             <form method="post">
                 <div class="form-group">
                     <label for="username">Username</label>
@@ -135,9 +141,11 @@
                 <button type="submit">Login</button>
             </form>
 
+            {% if not ldap_enabled %}
             <div class="links">
                 <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Register</a></p>
             </div>
+            {% endif %}
 
             <a href="{{ url_for('videos.index') }}" class="back-link">&larr; Back to videos</a>
         </div>

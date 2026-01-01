@@ -20,21 +20,63 @@ def login():
         if not username or not password:
             return render_template('auth/login.html', error="Username and password are required")
 
-        user = User.query.filter_by(username=username).first()
+        ldap_enabled = current_app.config.get("LDAP_ENABLED", False)
+        ldap_service = current_app.config.get("LDAP_SERVICE")
 
-        if user and user.check_password(password):
-            user.last_login = datetime.utcnow()
-            db.session.commit()
-            login_user(user)
-            current_app.logger.info(f"User '{username}' logged in successfully")
+        if ldap_enabled and ldap_service:
+            # LDAP mode: admin local fallback, everyone else via LDAP
+            user = User.query.filter_by(username=username).first()
 
-            next_page = request.args.get('next')
-            if next_page:
-                return redirect(next_page)
-            return redirect(url_for('videos.index'))
+            # Allow local admin to login with local password
+            if username == "admin" and user and user.is_local_user() and user.check_password(password):
+                user.last_login = datetime.utcnow()
+                db.session.commit()
+                login_user(user)
+                current_app.logger.info(f"Admin '{username}' logged in via local auth (LDAP mode)")
 
-        current_app.logger.warning(f"Failed login attempt for username '{username}'")
-        return render_template('auth/login.html', error="Invalid username or password")
+                next_page = request.args.get('next')
+                if next_page:
+                    return redirect(next_page)
+                return redirect(url_for('videos.index'))
+
+            # LDAP authentication for all other users
+            if ldap_service.authenticate(username, password):
+                if not user:
+                    # Auto-create user on first LDAP login
+                    user = User(username=username, auth_type="ldap")
+                    db.session.add(user)
+                    current_app.logger.info(f"Auto-created LDAP user '{username}'")
+
+                user.last_login = datetime.utcnow()
+                db.session.commit()
+                login_user(user)
+                current_app.logger.info(f"User '{username}' logged in via LDAP")
+
+                next_page = request.args.get('next')
+                if next_page:
+                    return redirect(next_page)
+                return redirect(url_for('videos.index'))
+
+            current_app.logger.warning(f"Failed LDAP login attempt for username '{username}'")
+            return render_template('auth/login.html', error="Invalid username or password")
+
+        else:
+            # Local authentication mode
+            user = User.query.filter_by(username=username).first()
+
+            if user and user.check_password(password):
+                user.last_login = datetime.utcnow()
+                db.session.commit()
+                login_user(user)
+                current_app.logger.info(f"User '{username}' logged in successfully")
+
+                next_page = request.args.get('next')
+                if next_page:
+                    return redirect(next_page)
+                return redirect(url_for('videos.index'))
+
+            current_app.logger.warning(f"Failed login attempt for username '{username}'")
+            return render_template('auth/login.html', error="Invalid username or password")
 
     return render_template('auth/login.html')
 
@@ -43,6 +85,12 @@ def login():
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('videos.index'))
+
+    # Disable registration when LDAP is enabled
+    ldap_enabled = current_app.config.get("LDAP_ENABLED", False)
+    if ldap_enabled:
+        flash("Registration is disabled. Please use your LDAP credentials to login.", "info")
+        return redirect(url_for('auth.login'))
 
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
