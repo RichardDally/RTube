@@ -25,6 +25,7 @@ dependencies = [
     "authlib>=1.3.0",
     "requests>=2.31.0",
     "python3-saml>=1.16.0",
+    "python-dotenv>=1.2.1",
 ]
 
 [project.urls]
@@ -33,6 +34,15 @@ Repository = "https://github.com/RichardDally/RTube"
 
 [tool.setuptools.packages.find]
 where = ["."]
+exclude = ["tests", "tests.*"]
+
+[tool.setuptools.package-data]
+rtube = [
+    "templates/**/*.html",
+    "static/js/*.js",
+    "static/package.json",
+    "static/package-lock.json",
+]
 
 [dependency-groups]
 dev = [

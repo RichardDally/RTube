@@ -44,6 +44,7 @@ def _log_configuration(app):
     app.logger.info("=" * 60)
     app.logger.info("Configuration:")
     app.logger.info(f"  Instance path: {app.instance_path}")
+    app.logger.info(f"  Static folder: {app.static_folder}")
     app.logger.info(f"  Videos folder: {app.config.get('VIDEOS_FOLDER')}")
     app.logger.info(f"  Thumbnails folder: {app.config.get('THUMBNAILS_FOLDER')}")
     app.logger.info(f"  Database URI: {_redact_value('DATABASE_URL', app.config.get('SQLALCHEMY_DATABASE_URI'))}")
@@ -59,6 +60,15 @@ def _log_configuration(app):
     app.logger.info(f"  OIDC enabled: {app.config.get('OIDC_ENABLED', False)}")
     app.logger.info(f"  SAML enabled: {app.config.get('SAML_ENABLED', False)}")
     app.logger.info("=" * 60)
+
+    # Check if node_modules exists in static folder
+    if app.static_folder:
+        node_modules_path = Path(app.static_folder) / "node_modules"
+        if not node_modules_path.exists():
+            app.logger.critical(
+                f"node_modules not found in static folder ({app.static_folder}). "
+                f"Run 'npm install' in the static folder to install JavaScript dependencies."
+            )
 
 
 migrate = Migrate()
@@ -109,7 +119,10 @@ def create_app(test_config=None):
     # Custom instance path for storing sessions, secret key, etc.
     instance_path = os.environ.get("RTUBE_INSTANCE_PATH")
     if instance_path:
-        app = Flask(__name__, instance_path=instance_path)
+        # Static folder is inside the installed package (wheel)
+        package_dir = Path(__file__).parent
+        static_folder = str(package_dir / "static")
+        app = Flask(__name__, instance_path=instance_path, static_folder=static_folder)
     else:
         app = Flask(__name__)
 
