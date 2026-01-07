@@ -358,6 +358,50 @@ export FLASK_APP=rtube.app:create_app  # Linux/macOS
 set FLASK_APP=rtube.app:create_app     # Windows
 ```
 
+## Publishing to PyPI
+
+RTube includes a GitHub Actions workflow to build and publish packages to PyPI using [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) (OIDC).
+
+### Setup
+
+1. **Configure Trusted Publisher on PyPI**:
+   - Go to [PyPI Publishing Settings](https://pypi.org/manage/account/publishing/)
+   - Click "Add a new pending publisher" (for new projects) or configure on the project page (for existing projects)
+   - Fill in the form:
+     - **PyPI Project Name**: `rtube`
+     - **Owner**: your GitHub username or organization
+     - **Repository name**: `RTube`
+     - **Workflow name**: `publish.yml`
+     - **Environment name**: `pypi`
+   - Click "Add"
+
+2. **Create a GitHub Environment**:
+   - Go to your repository on GitHub
+   - Navigate to **Settings** > **Environments**
+   - Click **New environment**
+   - Name: `pypi` (must match the name configured on PyPI)
+   - Add protection rules if desired (e.g., required reviewers)
+
+No API tokens or secrets are required - authentication is handled automatically via OIDC.
+
+### Triggering a Release
+
+The workflow is triggered automatically when you push a version tag:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Or manually via the Actions tab using "workflow_dispatch".
+
+### Workflow Steps
+
+1. **Build**: Creates wheel and sdist using `uv build`
+2. **Publish to PyPI**: Uploads packages using OIDC trusted publishing
+3. **Create GitHub Release**: Creates a release with the built artifacts
+4. **Rollback on failure**: Logs errors and provides guidance if any step fails
+
 ### Git LFS side note
 * Download and install [Git Large File Storage](https://git-lfs.github.com/)
 * Track mp4 files `$ git lfs track "*.mp4"`
