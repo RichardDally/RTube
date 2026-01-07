@@ -64,6 +64,23 @@ Then open http://127.0.0.1:5000 in your browser.
 - Automatic URL detection and linking (urlize)
 - Character limit (5000 characters)
 
+### Playlists
+
+- Create and manage custom playlists
+- Add/remove videos from playlists
+- Reorder videos within playlists
+- Public playlist viewing
+
+### Favorites
+
+- Mark videos as favorites
+- Quick access to favorite videos from profile
+
+### Search
+
+- Search videos by title, description, or author
+- Results grouped by match type
+
 ### Share Button
 
 Each video page includes a share button that copies the current URL to the clipboard. The button provides visual feedback when the URL is copied.
@@ -89,11 +106,12 @@ Each video page includes a share button that copies the current URL to the clipb
 
 ## Authentication
 
-RTube includes a built-in authentication system with three user roles:
+RTube includes a built-in authentication system with four user roles:
 
-- **Anonymous**: Can view videos but cannot upload
-- **Uploader**: Can view and upload videos
-- **Admin**: Full access including user management and moderation
+- **Anonymous**: Can view public videos only (not logged in)
+- **Viewer**: Can view videos, create playlists, and add favorites, but cannot upload
+- **Uploader**: Can view and upload videos, encode videos, manage own content
+- **Admin**: Full access including user management, role changes, and moderation
 
 ### User Profiles
 
@@ -103,11 +121,25 @@ Each user has a profile page accessible at `/profile` (own profile) or `/profile
 
 ### Admin Features
 
-Administrators have access to `/admin/users` which provides:
+Administrators have access to the **Admin** dropdown menu which provides:
+
+#### User Management (`/admin/users`)
 - List of all registered users with their roles
 - Online/offline status based on recent activity
-- Video and comment counts per user
+- Video, comment, playlist, and favorite counts per user
+- Role management: change user roles (Viewer, Uploader, Admin)
 - Direct links to user profiles for moderation
+- Password change for admin account
+
+#### Import Videos (`/admin/import-videos`)
+- Scan for orphan encoded videos (HLS files not in database)
+- Display available quality variants for each video
+- Bulk import with automatic thumbnail generation
+- Videos are imported as private by default
+
+#### Video Editing (`/watch/edit`)
+- Admins can edit any video (not just their own)
+- Change video owner to any Uploader or Admin user
 
 ### Session Persistence
 
@@ -289,6 +321,10 @@ PostgreSQL:
 ```sql
 ALTER TABLE users ADD COLUMN sso_subject VARCHAR(255);
 ```
+
+**For role column (if upgrading from older version):**
+
+The `role` column should already exist with default value `uploader`. Valid roles are: `viewer`, `uploader`, `admin`.
 
 ### Creating New Migrations
 
