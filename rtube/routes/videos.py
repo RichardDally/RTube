@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, current_app, flash, redirect, url_
 from flask_login import current_user, login_required
 
 from rtube.models import db, Video, VideoVisibility, Comment, EncodingJob, Favorite, PlaylistVideo
+from rtube.models_auth import User, UserRole
 
 logger = logging.getLogger(__name__)
 
@@ -363,6 +364,13 @@ def edit_video():
     if not is_owner and not is_admin:
         abort(403)
 
+    # Get list of eligible owners for admin (users who can upload: UPLOADER or ADMIN)
+    eligible_owners = []
+    if is_admin:
+        eligible_owners = User.query.filter(
+            User.role.in_([UserRole.UPLOADER.value, UserRole.ADMIN.value])
+        ).order_by(User.username).all()
+
     if request.method == 'POST':
         title = request.form.get('title', '').strip()[:255] or None
         description = request.form.get('description', '').strip() or None
@@ -376,12 +384,24 @@ def edit_video():
         video.description = description
         video.language = language
         video.visibility = visibility
+
+        # Admin can change the owner
+        if is_admin:
+            new_owner = request.form.get('owner_username', '').strip()
+            if new_owner:
+                # Validate the new owner exists and can upload
+                new_owner_user = User.query.filter_by(username=new_owner).first()
+                if new_owner_user and new_owner_user.can_upload():
+                    if video.owner_username != new_owner:
+                        logger.info(f"Admin '{current_user.username}' changed owner of video '{video.short_id}' from '{video.owner_username}' to '{new_owner}'")
+                        video.owner_username = new_owner
+
         db.session.commit()
 
         flash("Video updated successfully.", "success")
         return redirect(url_for('videos.watch_video', v=short_id))
 
-    return render_template('videos/edit.html', video=video)
+    return render_template('videos/edit.html', video=video, is_admin=is_admin, eligible_owners=eligible_owners)
 
 
 @videos_bp.route('/watch/delete', methods=['POST'])

@@ -1,5 +1,6 @@
 import logging
 import random
+import re
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -75,6 +76,96 @@ class EncoderService:
             return True
         except Exception as e:
             logger.warning(f"Failed to generate thumbnail: {e}")
+            return False
+
+    def generate_thumbnail_from_hls(self, videos_folder: Path, filename: str, thumbnail_path: Path) -> bool:
+        """Generate a thumbnail from an existing HLS video.
+
+        Finds .ts segments directly by filename pattern and picks a random one.
+
+        Args:
+            videos_folder: Path to the videos folder
+            filename: Base filename (without extension)
+            thumbnail_path: Path where the thumbnail should be saved
+
+        Returns:
+            True if thumbnail was generated successfully, False otherwise
+        """
+        # Find quality-specific m3u8 files for this video to determine best quality
+        quality_pattern = re.compile(rf'^{re.escape(filename)}_(\d+p)\.m3u8$')
+
+        qualities = []
+        for m3u8_file in videos_folder.glob(f'{filename}_*p.m3u8'):
+            match = quality_pattern.match(m3u8_file.name)
+            if match:
+                quality_str = match.group(1)  # e.g., "720p"
+                quality_num = int(quality_str.replace('p', ''))
+                qualities.append((quality_num, quality_str))
+
+        if not qualities:
+            logger.warning(f"No quality variants found for {filename}")
+            return False
+
+        # Sort by resolution (descending) and pick the highest quality
+        qualities.sort(key=lambda x: x[0], reverse=True)
+        _, best_quality = qualities[0]  # e.g., "720p"
+
+        # Find .ts segments directly by filename pattern (e.g., filename_720p_0000.ts)
+        ts_pattern = f'{filename}_{best_quality}_*.ts'
+        ts_files = sorted(videos_folder.glob(ts_pattern))
+
+        if not ts_files:
+            logger.warning(f"No .ts segments found matching {ts_pattern}")
+            return False
+
+        logger.info(f"Found {len(ts_files)} segments for {filename} at {best_quality}")
+
+        # Pick a random segment (between 10% and 90% of the video)
+        num_segments = len(ts_files)
+        if num_segments > 2:
+            start_idx = max(0, int(num_segments * 0.1))
+            end_idx = min(num_segments - 1, int(num_segments * 0.9))
+            selected_idx = random.randint(start_idx, end_idx)
+        else:
+            selected_idx = 0
+
+        selected_ts = ts_files[selected_idx]
+        logger.info(f"Selected segment {selected_ts.name}")
+
+        # Generate thumbnail from the segment at a random offset
+        try:
+            # Get segment duration
+            duration = self._get_video_duration(selected_ts)
+            if duration > 1:
+                offset = random.uniform(0.5, duration - 0.5)
+            else:
+                offset = 0
+
+            thumbnail_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Note: -ss must come AFTER -i for .ts segments because they have
+            # non-zero start timestamps. With -ss before -i, ffmpeg seeks from
+            # absolute time 0, missing the segment's content entirely.
+            result = subprocess.run(
+                ["ffmpeg", "-y", "-i", str(selected_ts), "-ss", str(offset),
+                 "-vframes", "1", "-q:v", "2", str(thumbnail_path)],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode != 0:
+                logger.warning(f"ffmpeg error: {result.stderr}")
+                return False
+
+            if thumbnail_path.exists() and thumbnail_path.stat().st_size > 0:
+                logger.info(f"Generated thumbnail from {selected_ts.name}: {thumbnail_path}")
+                return True
+            else:
+                logger.warning(f"Thumbnail file not created or empty")
+                return False
+
+        except Exception as e:
+            logger.warning(f"Failed to generate thumbnail from HLS: {e}")
             return False
 
     def _encode_worker(self, job_id: int, input_path: Path, output_path: Path, qualities: list[str], delete_original: bool = True, thumbnail_path: Path = None):

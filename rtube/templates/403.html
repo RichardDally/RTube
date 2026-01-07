@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Access Denied - RTube</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #1a1a1a;
+                color: #fff;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+            .error-container {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                padding: 40px 20px;
+            }
+            .error-code {
+                font-size: 120px;
+                font-weight: bold;
+                color: #8B0000;
+                margin: 0;
+                line-height: 1;
+            }
+            .error-title {
+                font-size: 28px;
+                margin: 20px 0 10px 0;
+                color: #fff;
+            }
+            .error-message {
+                font-size: 16px;
+                color: #888;
+                margin-bottom: 30px;
+                max-width: 500px;
+            }
+            .error-info {
+                background-color: #2a2a2a;
+                border-radius: 8px;
+                padding: 20px 30px;
+                margin-bottom: 30px;
+                text-align: left;
+            }
+            .error-info p {
+                color: #aaa;
+                font-size: 14px;
+                margin: 10px 0;
+            }
+            .error-info .role-badge {
+                display: inline-block;
+                padding: 3px 8px;
+                border-radius: 3px;
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+                background-color: #1565C0;
+                color: #fff;
+            }
+            .btn-home {
+                display: inline-block;
+                padding: 12px 24px;
+                background-color: #4CAF50;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                transition: background-color 0.2s;
+                font-size: 16px;
+                margin: 5px;
+            }
+            .btn-home:hover {
+                background-color: #45a049;
+            }
+            .btn-secondary {
+                display: inline-block;
+                padding: 12px 24px;
+                background-color: #444;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                transition: background-color 0.2s;
+                font-size: 16px;
+                margin: 5px;
+            }
+            .btn-secondary:hover {
+                background-color: #555;
+            }
+            footer {
+                padding-top: 20px;
+                border-top: 1px solid #333;
+                text-align: center;
+                color: #666;
+                font-size: 12px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="error-container">
+            <p class="error-code">403</p>
+            <h1 class="error-title">Access Denied</h1>
+            <p class="error-message">You don't have permission to access this page.</p>
+            {% if current_user.is_authenticated and current_user.is_viewer() %}
+            <div class="error-info">
+                <p>Your current role is <span class="role-badge">viewer</span></p>
+                <p>Uploading videos requires the <strong>uploader</strong> or <strong>admin</strong> role.</p>
+                <p>Contact an administrator if you need upload permissions.</p>
+            </div>
+            {% endif %}
+            <div>
+                <a href="/" class="btn-home">Back to homepage</a>
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('playlists.index') }}" class="btn-secondary">My Playlists</a>
+                {% endif %}
+            </div>
+        </div>
+        <footer>RTube v{{ rtube_version }}</footer>
+    </body>
+</html>

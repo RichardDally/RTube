@@ -36,7 +36,16 @@
             .video-container {
                 display: flex;
                 flex-direction: column;
-                align-items: flex-start;
+                align-items: center;
+            }
+            .video-title {
+                color: #fff;
+                font-family: Arial, sans-serif;
+                font-size: 24px;
+                font-weight: bold;
+                text-align: center;
+                margin-bottom: 15px;
+                max-width: 1280px;
             }
             .video-meta {
                 display: flex;
@@ -498,6 +507,7 @@
             <a href="/">RTube</a>
         </div>
         <div class="video-container">
+            <h1 class="video-title">{{ filename }}</h1>
             <video-js id="RPlayer" class="vjs-default-skin" controls preload="auto" width="1280" height="720">
                 <source src="{{ video_url }}" type="application/x-mpegURL">
                 Your browser doesn't support video tag.

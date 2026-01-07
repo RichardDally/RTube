@@ -91,6 +91,25 @@
                 background-color: #2E7D32;
                 color: #fff;
             }
+            .role-viewer {
+                background-color: #1565C0;
+                color: #fff;
+            }
+            .role-select {
+                padding: 4px 8px;
+                background-color: #333;
+                color: #fff;
+                border: 1px solid #444;
+                border-radius: 4px;
+                font-size: 12px;
+                cursor: pointer;
+            }
+            .role-select:hover {
+                border-color: #4CAF50;
+            }
+            .role-form {
+                display: inline-block;
+            }
             .status-badge {
                 display: inline-flex;
                 align-items: center;
@@ -220,7 +239,17 @@
                 <tr>
                     <td class="username"><a href="{{ url_for('auth.user_profile', username=data.user.username) }}">{{ data.user.username }}</a></td>
                     <td>
+                        {% if data.user.username == 'admin' %}
                         <span class="role-badge role-{{ data.user.role }}">{{ data.user.role }}</span>
+                        {% else %}
+                        <form class="role-form" method="post" action="{{ url_for('admin.change_user_role', username=data.user.username) }}">
+                            <select name="role" class="role-select" onchange="this.form.submit()">
+                                <option value="viewer" {% if data.user.role == 'viewer' %}selected{% endif %}>viewer</option>
+                                <option value="uploader" {% if data.user.role == 'uploader' %}selected{% endif %}>uploader</option>
+                                <option value="admin" {% if data.user.role == 'admin' %}selected{% endif %}>admin</option>
+                            </select>
+                        </form>
+                        {% endif %}
                     </td>
                     <td>
                         {% if data.is_online %}

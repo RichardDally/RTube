@@ -178,6 +178,74 @@
             .btn-playlists:hover {
                 background-color: #555;
             }
+            .nav-left {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+            .nav-right {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+            .btn-logout {
+                padding: 8px 16px;
+                background-color: #8B0000;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size: 13px;
+                transition: background-color 0.2s;
+            }
+            .btn-logout:hover {
+                background-color: #a00000;
+            }
+            .dropdown {
+                position: relative;
+                display: inline-block;
+            }
+            .dropdown-toggle {
+                padding: 8px 16px;
+                background-color: #444;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size: 13px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .dropdown-toggle:hover {
+                background-color: #555;
+            }
+            .dropdown-toggle::after {
+                content: " \25BC";
+                font-size: 10px;
+            }
+            .dropdown-menu {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                background-color: #2a2a2a;
+                border-radius: 5px;
+                min-width: 160px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+                z-index: 1000;
+                margin-top: 5px;
+            }
+            .dropdown:hover .dropdown-menu {
+                display: block;
+            }
+            .dropdown-menu a {
+                display: block;
+                padding: 10px 15px;
+                color: #fff;
+                text-decoration: none;
+                font-size: 13px;
+            }
+            .dropdown-menu a:hover {
+                background-color: #3a3a3a;
+            }
             footer {
                 margin-top: 50px;
                 padding-top: 20px;
@@ -228,7 +296,7 @@
             }
             .btn-search {
                 padding: 10px 20px;
-                background-color: #4CAF50;
+                background-color: #444;
                 color: white;
                 border: none;
                 border-radius: 5px;
@@ -237,7 +305,7 @@
                 transition: background-color 0.2s;
             }
             .btn-search:hover {
-                background-color: #45a049;
+                background-color: #555;
             }
             .search-results-header {
                 margin-bottom: 20px;
@@ -279,23 +347,37 @@
     </head>
     <body>
         <div class="header">
-            <h1><a href="/" style="color: inherit; text-decoration: none;">RTube</a></h1>
-            <div class="header-actions">
-                <div class="auth-links">
-                    {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('auth.profile') }}" class="username">{{ current_user.username }}</a>
-                    <a href="{{ url_for('auth.logout') }}">Logout</a>
-                    {% else %}
-                    <a href="{{ url_for('auth.login') }}" class="btn-login">Login</a>
-                    <a href="{{ url_for('auth.register') }}">Register</a>
-                    {% endif %}
-                </div>
+            <div class="nav-left">
+                <h1><a href="/" style="color: inherit; text-decoration: none;">RTube</a></h1>
                 {% if current_user.is_authenticated %}
-                {% if current_user.is_admin() %}
-                <a href="{{ url_for('admin.users') }}" class="btn-admin">Admin</a>
-                {% endif %}
                 <a href="{{ url_for('playlists.index') }}" class="btn-playlists">Playlists</a>
-                <a href="/encode" class="btn-upload">Encode a video</a>
+                {% if current_user.can_upload() %}
+                <div class="dropdown">
+                    <span class="dropdown-toggle">Encoding</span>
+                    <div class="dropdown-menu">
+                        <a href="/encode">Encode a video</a>
+                        <a href="{{ url_for('encoding.encoding_jobs_list') }}">Encoding jobs</a>
+                    </div>
+                </div>
+                {% endif %}
+                {% if current_user.is_admin() %}
+                <div class="dropdown">
+                    <span class="dropdown-toggle btn-admin">Admin</span>
+                    <div class="dropdown-menu">
+                        <a href="{{ url_for('admin.users') }}">Users</a>
+                        <a href="{{ url_for('admin.import_videos') }}">Import Videos</a>
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+            <div class="nav-right">
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('auth.profile') }}" class="username">{{ current_user.username }}</a>
+                <a href="{{ url_for('auth.logout') }}" class="btn-logout">Logout</a>
+                {% else %}
+                <a href="{{ url_for('auth.login') }}" class="btn-login">Login</a>
+                <a href="{{ url_for('auth.register') }}">Register</a>
                 {% endif %}
             </div>
         </div>

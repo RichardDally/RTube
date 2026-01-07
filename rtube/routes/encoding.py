@@ -1,7 +1,8 @@
 import json
 import logging
+from functools import wraps
 from pathlib import Path
-from flask import Blueprint, render_template, request, redirect, url_for, current_app, Response
+from flask import Blueprint, render_template, request, redirect, url_for, current_app, Response, abort
 from flask_login import login_required, current_user
 
 from rtube.models import db, Video, EncodingJob
@@ -18,14 +19,26 @@ def allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def uploader_required(f):
+    """Decorator to require uploader or admin role."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.can_upload():
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 @encoding_bp.route('/', methods=['GET'])
 @login_required
+@uploader_required
 def upload_form():
     return render_template('encoding/upload.html')
 
 
 @encoding_bp.route('/', methods=['POST'])
 @login_required
+@uploader_required
 def upload_video():
     if 'video' not in request.files:
         return render_template('encoding/upload.html', error="No file selected")

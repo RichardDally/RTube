@@ -114,6 +114,15 @@
                 color: #666;
                 font-size: 12px;
             }
+            .admin-section {
+                border: 1px solid #8B0000;
+                border-radius: 5px;
+                padding: 15px;
+                background-color: #2a1a1a;
+            }
+            .admin-section label {
+                color: #ff6b6b;
+            }
         </style>
     </head>
     <body>
@@ -260,6 +269,16 @@
                     <option value="private" {{ 'selected' if video.visibility == 'private' else '' }}>Private</option>
                 </select>
             </div>
+            {% if is_admin and eligible_owners %}
+            <div class="form-group admin-section">
+                <label for="owner_username">Owner (Admin only)</label>
+                <select id="owner_username" name="owner_username">
+                    {% for user in eligible_owners %}
+                    <option value="{{ user.username }}" {{ 'selected' if video.owner_username == user.username else '' }}>{{ user.username }} ({{ user.role }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
             <button type="submit" class="btn-submit">Save Changes</button>
         </form>
 

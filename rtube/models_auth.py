@@ -14,6 +14,7 @@ ph = PasswordHasher()
 
 class UserRole(Enum):
     ANONYMOUS = "anonymous"
+    VIEWER = "viewer"
     UPLOADER = "uploader"
     ADMIN = "admin"
 
@@ -56,6 +57,13 @@ class User(UserMixin, db.Model):
         return self.role == UserRole.ADMIN.value
 
     def is_uploader(self) -> bool:
+        return self.role in (UserRole.UPLOADER.value, UserRole.ADMIN.value)
+
+    def is_viewer(self) -> bool:
+        return self.role == UserRole.VIEWER.value
+
+    def can_upload(self) -> bool:
+        """Check if user can upload videos (UPLOADER or ADMIN only)."""
         return self.role in (UserRole.UPLOADER.value, UserRole.ADMIN.value)
 
     def is_ldap_user(self) -> bool:

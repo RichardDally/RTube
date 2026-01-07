@@ -4,7 +4,7 @@ import secrets
 from datetime import datetime
 from pathlib import Path
 from logging.config import dictConfig
-from flask import Flask
+from flask import Flask, render_template
 from flask.cli import load_dotenv
 from flask_login import LoginManager, current_user
 from flask_migrate import Migrate
@@ -261,6 +261,35 @@ def create_app(test_config=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(playlists_bp)
+
+    # Error handlers
+    @app.errorhandler(400)
+    def bad_request(e):
+        return render_template('400.html'), 400
+
+    @app.errorhandler(401)
+    def unauthorized(e):
+        return render_template('401.html'), 401
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template('403.html'), 403
+
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        return render_template('405.html'), 405
+
+    @app.errorhandler(500)
+    def internal_server_error(e):
+        return render_template('500.html'), 500
+
+    @app.errorhandler(501)
+    def not_implemented(e):
+        return render_template('501.html'), 501
+
+    @app.errorhandler(503)
+    def service_unavailable(e):
+        return render_template('503.html'), 503
 
     # Update last_seen timestamp for logged-in users
     @app.before_request
