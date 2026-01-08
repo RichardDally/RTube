@@ -484,11 +484,12 @@ Or manually via the Actions tab using "workflow_dispatch".
 
 ### Workflow Steps
 
-1. **Build**: Creates wheel and sdist using `uv build`
-2. **Publish to PyPI**: Uploads packages using OIDC trusted publishing
-3. **Build and Push Docker**: Builds and pushes Docker image to Docker Hub (tagged with version and `latest`)
-4. **Create GitHub Release**: Creates a release with the built artifacts
-5. **Rollback on failure**: Logs errors and provides guidance if any step fails
+1. **Build Wheel**: Creates wheel and sdist using `uv build`
+2. **Build Docker**: Builds Docker image using the wheel (validates image builds correctly)
+3. **Publish to PyPI**: Uploads packages using OIDC trusted publishing (only after Docker build succeeds)
+4. **Push Docker**: Pushes Docker image to Docker Hub (only after Docker build succeeds)
+5. **Create GitHub Release**: Creates a release with the built artifacts (only after PyPI and Docker Hub publish succeed)
+6. **Rollback on failure**: Logs errors and provides guidance if any step fails
 
 ### Git LFS side note
 * Download and install [Git Large File Storage](https://git-lfs.github.com/)
