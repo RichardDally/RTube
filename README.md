@@ -95,14 +95,13 @@ Each video page includes a share button that copies the current URL to the clipb
 | `RTUBE_HTTPS` | Enable secure session cookies (`true`, `1`, or `yes` when using HTTPS) | `false` |
 | `RTUBE_KEEP_ORIGINAL_VIDEO` | Keep original MP4 file after encoding (`true`, `1`, or `yes` to enable) | `false` |
 | `RTUBE_INSTANCE_PATH` | Custom path for instance folder (sessions, secret key). Must be an absolute path. | `instance/` |
-| `RTUBE_LDAP_ENABLED` | Enable LDAP authentication (`true`, `1`, or `yes`) | `false` |
-| `RTUBE_LDAP_SERVER` | LDAP server URL | `ldap://localhost:389` |
-| `RTUBE_LDAP_USE_SSL` | Use SSL/TLS for LDAP connection | `false` |
-| `RTUBE_LDAP_BIND_DN` | DN for LDAP bind (service account) | - |
-| `RTUBE_LDAP_BIND_PASSWORD` | Password for LDAP bind | - |
-| `RTUBE_LDAP_USER_BASE` | Base DN for user search | - |
-| `RTUBE_LDAP_USER_FILTER` | LDAP filter for user search | `(uid={username})` |
-| `RTUBE_LDAP_USERNAME_ATTRIBUTE` | LDAP attribute containing username | `uid` |
+| `RTUBE_OIDC_ENABLED` | Enable OIDC authentication (`true`, `1`, or `yes`) | `false` |
+| `RTUBE_OIDC_CLIENT_ID` | OAuth2/OIDC client ID | - |
+| `RTUBE_OIDC_CLIENT_SECRET` | OAuth2/OIDC client secret | - |
+| `RTUBE_OIDC_DISCOVERY_URL` | OIDC discovery endpoint URL (`.well-known/openid-configuration`) | - |
+| `RTUBE_OIDC_SCOPES` | Space-separated OAuth2 scopes | `openid profile email` |
+| `RTUBE_OIDC_USERNAME_CLAIM` | Claim to use for username | `preferred_username` |
+| `RTUBE_OIDC_REDIRECT_URI` | Redirect URI for OIDC callback | `http://127.0.0.1:5000/auth/oidc/callback` |
 
 ## Authentication
 
@@ -163,108 +162,6 @@ On first startup, a default admin account is created:
 
 **Important**: Change this password immediately in production!
 
-### LDAP Authentication
-
-RTube supports LDAP authentication as an alternative to local accounts. When LDAP is enabled:
-
-- All users authenticate via LDAP (except the local `admin` account)
-- User accounts are auto-created on first LDAP login
-- Local registration is disabled
-- The local `admin` account can still login with its password (fallback for emergencies)
-
-#### Configuration Example
-
-```bash
-export RTUBE_LDAP_ENABLED=true
-export RTUBE_LDAP_SERVER=ldap://ldap.example.com:389
-export RTUBE_LDAP_BIND_DN="cn=readonly,dc=example,dc=com"
-export RTUBE_LDAP_BIND_PASSWORD="secret"
-export RTUBE_LDAP_USER_BASE="ou=users,dc=example,dc=com"
-export RTUBE_LDAP_USER_FILTER="(uid={username})"
-export RTUBE_LDAP_USERNAME_ATTRIBUTE="uid"
-```
-
-#### For Active Directory
-
-```bash
-export RTUBE_LDAP_SERVER=ldap://ad.example.com:389
-export RTUBE_LDAP_BIND_DN="CN=Service Account,OU=Service Accounts,DC=example,DC=com"
-export RTUBE_LDAP_USER_BASE="OU=Users,DC=example,DC=com"
-export RTUBE_LDAP_USER_FILTER="(sAMAccountName={username})"
-export RTUBE_LDAP_USERNAME_ATTRIBUTE="sAMAccountName"
-```
-
-#### How it Works
-
-1. User enters LDAP credentials on the login page
-2. RTube searches for the user in LDAP using the configured filter
-3. If found, RTube attempts to bind with the user's DN and password
-4. On successful authentication, a local user record is created (if first login)
-5. The user is logged in with the `uploader` role
-
-### SSO Authentication (OIDC / SAML)
-
-RTube supports Single Sign-On via OpenID Connect (OIDC) and SAML 2.0 protocols. These can be enabled alongside local and LDAP authentication.
-
-#### OIDC Configuration (Keycloak, Azure AD, Okta, etc.)
-
-```bash
-export RTUBE_OIDC_ENABLED=true
-export RTUBE_OIDC_CLIENT_ID="your-client-id"
-export RTUBE_OIDC_CLIENT_SECRET="your-client-secret"
-export RTUBE_OIDC_DISCOVERY_URL="https://idp.example.com/.well-known/openid-configuration"
-export RTUBE_OIDC_SCOPES="openid profile email"
-export RTUBE_OIDC_USERNAME_CLAIM="preferred_username"
-```
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `RTUBE_OIDC_ENABLED` | Enable OIDC authentication | `false` |
-| `RTUBE_OIDC_CLIENT_ID` | OAuth2 client ID | - |
-| `RTUBE_OIDC_CLIENT_SECRET` | OAuth2 client secret | - |
-| `RTUBE_OIDC_DISCOVERY_URL` | OIDC discovery endpoint URL | - |
-| `RTUBE_OIDC_SCOPES` | Space-separated OAuth2 scopes | `openid profile email` |
-| `RTUBE_OIDC_USERNAME_CLAIM` | Claim to use for username | `preferred_username` |
-
-**Callback URL**: Configure your IdP with the callback URL: `https://your-rtube-domain/auth/oidc/callback`
-
-#### SAML 2.0 Configuration (ADFS, Okta, Shibboleth, etc.)
-
-```bash
-export RTUBE_SAML_ENABLED=true
-export RTUBE_SAML_IDP_ENTITY_ID="https://idp.example.com"
-export RTUBE_SAML_IDP_SSO_URL="https://idp.example.com/sso"
-export RTUBE_SAML_IDP_CERT_FILE="/path/to/idp-cert.pem"
-export RTUBE_SAML_SP_ENTITY_ID="https://rtube.example.com"
-export RTUBE_SAML_USERNAME_ATTRIBUTE="uid"
-```
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `RTUBE_SAML_ENABLED` | Enable SAML authentication | `false` |
-| `RTUBE_SAML_IDP_ENTITY_ID` | IdP Entity ID | - |
-| `RTUBE_SAML_IDP_SSO_URL` | IdP Single Sign-On URL | - |
-| `RTUBE_SAML_IDP_CERT_FILE` | Path to IdP certificate file | - |
-| `RTUBE_SAML_IDP_CERT` | IdP certificate (alternative to file) | - |
-| `RTUBE_SAML_SP_ENTITY_ID` | Service Provider Entity ID | Auto-generated |
-| `RTUBE_SAML_USERNAME_ATTRIBUTE` | SAML attribute for username | `uid` |
-| `RTUBE_SAML_EMAIL_ATTRIBUTE` | SAML attribute for email | `email` |
-| `RTUBE_SAML_NAME_ATTRIBUTE` | SAML attribute for display name | `displayName` |
-
-**Service Provider Metadata**: Available at `https://your-rtube-domain/auth/saml/metadata`
-
-**Assertion Consumer Service URL**: `https://your-rtube-domain/auth/saml/acs`
-
-#### How SSO Works
-
-1. User clicks "Sign in with SSO" on the login page
-2. User is redirected to the Identity Provider (IdP)
-3. After successful authentication, IdP redirects back to RTube
-4. RTube creates a local user account on first login (with `uploader` role)
-5. User is logged in
-
-SSO users cannot change their password in RTube - authentication is managed by the IdP.
-
 ### Password Requirements
 
 - Minimum 12 characters
@@ -273,6 +170,144 @@ SSO users cannot change their password in RTube - authentication is managed by t
 - At least one digit (0-9)
 - At least one special character
 - No common patterns or sequences
+
+### OIDC Authentication (SSO)
+
+RTube supports Single Sign-On via OpenID Connect (OIDC). This works with any OIDC-compliant identity provider (Keycloak, Authentik, Azure AD, Okta, Google, etc.).
+
+#### Configuration Example
+
+```bash
+export RTUBE_OIDC_ENABLED=true
+export RTUBE_OIDC_CLIENT_ID="rtube"
+export RTUBE_OIDC_CLIENT_SECRET="your-client-secret"
+export RTUBE_OIDC_DISCOVERY_URL="https://auth.example.com/realms/master/.well-known/openid-configuration"
+export RTUBE_OIDC_SCOPES="openid profile email"
+export RTUBE_OIDC_USERNAME_CLAIM="preferred_username"
+```
+
+#### How it Works
+
+1. User clicks "Sign in with SSO (OIDC)" on the login page
+2. User is redirected to the Identity Provider (IdP)
+3. After successful authentication, IdP redirects back to RTube
+4. RTube creates a local user account on first login (with `uploader` role)
+5. User is logged in
+
+OIDC users can also use local credentials if they have a local account.
+
+#### Testing OIDC Locally
+
+For local development and testing, you can use one of these OIDC providers:
+
+##### Option 1: Authentik (Recommended)
+
+[Authentik](https://goauthentik.io/) is an open-source identity provider that's easy to set up with Docker.
+
+```bash
+# Create docker-compose.yml
+cat > docker-compose.yml << 'EOF'
+services:
+  postgresql:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - database:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: authentik
+      POSTGRES_USER: authentik
+      POSTGRES_DB: authentik
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+
+  server:
+    image: ghcr.io/goauthentik/server:latest
+    restart: unless-stopped
+    command: server
+    environment:
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+      AUTHENTIK_SECRET_KEY: "generate-a-random-secret-key-here"
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    depends_on:
+      - postgresql
+      - redis
+
+  worker:
+    image: ghcr.io/goauthentik/server:latest
+    restart: unless-stopped
+    command: worker
+    environment:
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+      AUTHENTIK_SECRET_KEY: "generate-a-random-secret-key-here"
+    depends_on:
+      - postgresql
+      - redis
+
+volumes:
+  database:
+EOF
+
+# Start Authentik
+docker compose up -d
+```
+
+Then:
+1. Open http://localhost:9000/if/flow/initial-setup/ to create admin account
+2. Create a new OAuth2/OIDC Provider in Admin > Providers
+3. Create an Application linked to this provider
+4. Configure RTube with the client credentials
+
+##### Option 2: Keycloak
+
+```bash
+docker run -p 8080:8080 \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  quay.io/keycloak/keycloak:latest start-dev
+```
+
+Then:
+1. Open http://localhost:8080 and log in with admin/admin
+2. Create a new Realm (e.g., "rtube")
+3. Create a new Client with:
+   - Client ID: `rtube`
+   - Client authentication: ON
+   - Valid redirect URIs: `http://127.0.0.1:5000/auth/oidc/callback`
+4. Copy the client secret from Credentials tab
+5. Configure RTube:
+   ```bash
+   export RTUBE_OIDC_ENABLED=true
+   export RTUBE_OIDC_CLIENT_ID="rtube"
+   export RTUBE_OIDC_CLIENT_SECRET="your-client-secret"
+   export RTUBE_OIDC_DISCOVERY_URL="http://localhost:8080/realms/rtube/.well-known/openid-configuration"
+   ```
+
+##### Option 3: mock-oidc-server (Lightweight)
+
+For quick testing without a full IdP, you can use a mock OIDC server:
+
+```bash
+# Using Node.js
+npx mock-oidc-server --port 9090
+
+# Or using Python
+pip install oidc-provider
+python -m oidc_provider
+```
+
+**Note**: Mock servers are for development only - never use in production!
 
 ## Database Migrations
 
@@ -297,30 +332,6 @@ flask --app rtube.app:create_app db upgrade
 ### Auth Database Migrations
 
 The `users` table is stored in a separate auth database (`rtube_auth.db` or PostgreSQL). Flask-Migrate only manages the main database, so auth schema changes must be applied manually.
-
-**For LDAP support (adding `auth_type` column):**
-
-SQLite:
-```bash
-sqlite3 instance/rtube_auth.db "ALTER TABLE users ADD COLUMN auth_type VARCHAR(10) NOT NULL DEFAULT 'local';"
-```
-
-PostgreSQL:
-```sql
-ALTER TABLE users ADD COLUMN auth_type VARCHAR(10) NOT NULL DEFAULT 'local';
-```
-
-**For SSO support (adding `sso_subject` column):**
-
-SQLite:
-```bash
-sqlite3 instance/rtube_auth.db "ALTER TABLE users ADD COLUMN sso_subject VARCHAR(255);"
-```
-
-PostgreSQL:
-```sql
-ALTER TABLE users ADD COLUMN sso_subject VARCHAR(255);
-```
 
 **For role column (if upgrading from older version):**
 

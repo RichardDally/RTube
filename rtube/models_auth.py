@@ -25,10 +25,8 @@ class User(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=True)  # Nullable for LDAP users
+    password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default=UserRole.UPLOADER.value)
-    auth_type = db.Column(db.String(10), nullable=False, default="local")  # "local", "ldap", "oidc", "saml"
-    sso_subject = db.Column(db.String(255), nullable=True)  # OIDC sub or SAML NameID
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     last_login = db.Column(db.DateTime, nullable=True)
     last_seen = db.Column(db.DateTime, nullable=True)
@@ -38,11 +36,8 @@ class User(UserMixin, db.Model):
         self.password_hash = ph.hash(password)
 
     def check_password(self, password: str) -> bool:
-        """Verify password against stored hash.
-
-        Only works for local users. LDAP/SSO users should use their respective authentication.
-        """
-        if not self.is_local_user() or not self.password_hash:
+        """Verify password against stored hash."""
+        if not self.password_hash:
             return False
         try:
             ph.verify(self.password_hash, password)
@@ -65,27 +60,6 @@ class User(UserMixin, db.Model):
     def can_upload(self) -> bool:
         """Check if user can upload videos (UPLOADER or ADMIN only)."""
         return self.role in (UserRole.UPLOADER.value, UserRole.ADMIN.value)
-
-    def is_ldap_user(self) -> bool:
-        """Check if user authenticates via LDAP."""
-        return self.auth_type == "ldap"
-
-    def is_local_user(self) -> bool:
-        """Check if user authenticates via local password."""
-        # Treat None as local (default before persistence)
-        return self.auth_type in ("local", None)
-
-    def is_oidc_user(self) -> bool:
-        """Check if user authenticates via OIDC."""
-        return self.auth_type == "oidc"
-
-    def is_saml_user(self) -> bool:
-        """Check if user authenticates via SAML."""
-        return self.auth_type == "saml"
-
-    def is_sso_user(self) -> bool:
-        """Check if user authenticates via any SSO method (OIDC or SAML)."""
-        return self.auth_type in ("oidc", "saml")
 
     def is_online(self, timeout_minutes: int = 5) -> bool:
         """Check if user is considered online (active within timeout)."""

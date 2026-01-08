@@ -16,9 +16,7 @@ from rtube.models_auth import User, create_default_admin
 from rtube.routes import videos_bp, encoding_bp, admin_bp, playlists_bp
 from rtube.routes.auth import auth_bp
 from rtube.services.encoder import encoder_service
-from rtube.services.ldap_auth import LDAPAuthService, LDAPConfig
-from rtube.services.oidc_auth import OIDCAuthService, OIDCConfig
-from rtube.services.saml_auth import SAMLAuthService, SAMLConfig
+from rtube.services.oidc_auth import OIDCConfig, configure_flask_oidc
 
 # Keys that contain sensitive information and should be redacted in logs
 SENSITIVE_KEYS = {'SECRET_KEY', 'PASSWORD', 'TOKEN', 'API_KEY', 'DATABASE_URL', 'SQLALCHEMY_DATABASE_URI'}
@@ -54,11 +52,7 @@ def _log_configuration(app):
     app.logger.info(f"  Session cookie secure: {app.config.get('SESSION_COOKIE_SECURE')}")
     app.logger.info(f"  Keep original video: {app.config.get('KEEP_ORIGINAL_VIDEO')}")
     app.logger.info(f"  Max upload size: {app.config.get('MAX_CONTENT_LENGTH', 0) / (1024 * 1024 * 1024):.1f} GB")
-    app.logger.info(f"  LDAP enabled: {app.config.get('LDAP_ENABLED', False)}")
-    if app.config.get('LDAP_ENABLED'):
-        app.logger.info(f"  LDAP server: {app.config.get('LDAP_SERVER')}")
     app.logger.info(f"  OIDC enabled: {app.config.get('OIDC_ENABLED', False)}")
-    app.logger.info(f"  SAML enabled: {app.config.get('SAML_ENABLED', False)}")
     app.logger.info("=" * 60)
 
     # Check if node_modules exists in static folder
@@ -192,33 +186,12 @@ def create_app(test_config=None):
     # Encoding configuration
     app.config["KEEP_ORIGINAL_VIDEO"] = os.environ.get("RTUBE_KEEP_ORIGINAL_VIDEO", "").lower() in ("true", "1", "yes")
 
-    # LDAP configuration
-    ldap_config = LDAPConfig.from_env(os.environ)
-    if ldap_config:
-        app.config["LDAP_ENABLED"] = True
-        app.config["LDAP_SERVER"] = ldap_config.server
-        app.config["LDAP_SERVICE"] = LDAPAuthService(ldap_config)
-    else:
-        app.config["LDAP_ENABLED"] = False
-        app.config["LDAP_SERVICE"] = None
-
     # OIDC configuration
     oidc_config = OIDCConfig.from_env(os.environ)
-    if oidc_config:
-        app.config["OIDC_ENABLED"] = True
-        app.config["OIDC_SERVICE"] = OIDCAuthService(oidc_config)
+    if oidc_config and not is_testing:
+        configure_flask_oidc(app, oidc_config)
     else:
         app.config["OIDC_ENABLED"] = False
-        app.config["OIDC_SERVICE"] = None
-
-    # SAML configuration
-    saml_config = SAMLConfig.from_env(os.environ)
-    if saml_config:
-        app.config["SAML_ENABLED"] = True
-        app.config["SAML_SERVICE"] = SAMLAuthService(saml_config)
-    else:
-        app.config["SAML_ENABLED"] = False
-        app.config["SAML_SERVICE"] = None
 
     # Media storage paths (within instance folder)
     app.config["VIDEOS_FOLDER"] = str(Path(app.instance_path) / "videos")
@@ -304,9 +277,7 @@ def create_app(test_config=None):
         import rtube
         return {
             "rtube_version": rtube.__version__,
-            "ldap_enabled": app.config.get("LDAP_ENABLED", False),
             "oidc_enabled": app.config.get("OIDC_ENABLED", False),
-            "saml_enabled": app.config.get("SAML_ENABLED", False),
         }
 
     # Custom Jinja2 filter to convert URLs to clickable links
