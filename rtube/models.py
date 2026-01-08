@@ -131,3 +131,33 @@ class PlaylistVideo(db.Model):
     __table_args__ = (
         db.UniqueConstraint('playlist_id', 'video_id', name='unique_playlist_video'),
     )
+
+
+class WatchHistory(db.Model):
+    """Track user watch history with playback position for resume functionality."""
+    __tablename__ = "watch_history"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), nullable=False, index=True)
+    video_id = db.Column(db.Integer, db.ForeignKey("videos.id"), nullable=False)
+    position = db.Column(db.Float, default=0.0, nullable=False)  # Playback position in seconds
+    duration = db.Column(db.Float, nullable=True)  # Video duration in seconds
+    watched_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    video = db.relationship("Video", backref=db.backref("watch_history", lazy=True))
+
+    __table_args__ = (
+        db.UniqueConstraint('username', 'video_id', name='unique_user_video_history'),
+    )
+
+    def progress_percent(self) -> int:
+        """Return watch progress as percentage (0-100)."""
+        if not self.duration or self.duration == 0:
+            return 0
+        return min(100, int((self.position / self.duration) * 100))
+
+    def is_completed(self, threshold: float = 0.9) -> bool:
+        """Check if video is considered watched (default: 90% progress)."""
+        if not self.duration or self.duration == 0:
+            return False
+        return (self.position / self.duration) >= threshold

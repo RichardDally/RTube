@@ -3,7 +3,8 @@ from pathlib import Path
 from flask import Blueprint, render_template, current_app, flash, redirect, url_for, request, abort, send_from_directory
 from flask_login import current_user, login_required
 
-from rtube.models import db, Video, VideoVisibility, Comment, EncodingJob, Favorite, PlaylistVideo
+from datetime import datetime
+from rtube.models import db, Video, VideoVisibility, Comment, EncodingJob, Favorite, PlaylistVideo, WatchHistory
 from rtube.models_auth import User, UserRole
 
 logger = logging.getLogger(__name__)
@@ -446,6 +447,9 @@ def delete_video():
     # Delete associated encoding jobs
     EncodingJob.query.filter_by(video_id=video.id).delete()
 
+    # Delete associated watch history
+    WatchHistory.query.filter_by(video_id=video.id).delete()
+
     # Delete video files from disk
     videos_path = Path(current_app.config["VIDEOS_FOLDER"])
     if videos_path.exists():
@@ -549,3 +553,128 @@ def remove_favorite():
         flash("Video was not in your favorites.", "info")
 
     return redirect(url_for('videos.watch_video', v=short_id))
+
+
+@videos_bp.route('/watch/progress', methods=['POST'])
+@login_required
+def save_watch_progress():
+    """Save watch progress for resume functionality (AJAX endpoint)."""
+    from flask import jsonify
+
+    short_id = request.args.get('v', '')
+    if not short_id:
+        return jsonify({"error": "No video ID provided"}), 400
+
+    video = Video.query.filter(db.func.lower(Video.short_id) == short_id.lower()).first()
+    if not video:
+        return jsonify({"error": "Video not found"}), 404
+
+    try:
+        data = request.get_json()
+        position = float(data.get('position', 0))
+        duration = float(data.get('duration', 0)) if data.get('duration') else None
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid position or duration"}), 400
+
+    # Find or create watch history entry
+    history = WatchHistory.query.filter_by(
+        username=current_user.username,
+        video_id=video.id
+    ).first()
+
+    if history:
+        history.position = position
+        history.duration = duration
+        history.watched_at = datetime.utcnow()
+    else:
+        history = WatchHistory(
+            username=current_user.username,
+            video_id=video.id,
+            position=position,
+            duration=duration
+        )
+        db.session.add(history)
+
+    db.session.commit()
+    return jsonify({"success": True, "position": position})
+
+
+@videos_bp.route('/watch/progress', methods=['GET'])
+@login_required
+def get_watch_progress():
+    """Get watch progress for resume functionality (AJAX endpoint)."""
+    from flask import jsonify
+
+    short_id = request.args.get('v', '')
+    if not short_id:
+        return jsonify({"error": "No video ID provided"}), 400
+
+    video = Video.query.filter(db.func.lower(Video.short_id) == short_id.lower()).first()
+    if not video:
+        return jsonify({"error": "Video not found"}), 404
+
+    history = WatchHistory.query.filter_by(
+        username=current_user.username,
+        video_id=video.id
+    ).first()
+
+    if history:
+        return jsonify({
+            "position": history.position,
+            "duration": history.duration,
+            "progress_percent": history.progress_percent()
+        })
+
+    return jsonify({"position": 0, "duration": None, "progress_percent": 0})
+
+
+@videos_bp.route('/history')
+@login_required
+def watch_history():
+    """Display user's watch history."""
+    history_entries = WatchHistory.query.filter_by(
+        username=current_user.username
+    ).order_by(WatchHistory.watched_at.desc()).all()
+
+    # Build history data with video info
+    history_data = []
+    for entry in history_entries:
+        video = db.session.get(Video, entry.video_id)
+        if video:  # Video might have been deleted
+            history_data.append({
+                'entry': entry,
+                'video': video
+            })
+
+    return render_template('videos/history.html', history_data=history_data)
+
+
+@videos_bp.route('/history/clear', methods=['POST'])
+@login_required
+def clear_watch_history():
+    """Clear user's entire watch history."""
+    WatchHistory.query.filter_by(username=current_user.username).delete()
+    db.session.commit()
+    flash("Watch history cleared.", "success")
+    return redirect(url_for('videos.watch_history'))
+
+
+@videos_bp.route('/history/remove', methods=['POST'])
+@login_required
+def remove_from_history():
+    """Remove a single video from watch history."""
+    short_id = request.form.get('video_id', '')
+    if not short_id:
+        flash("No video specified.", "error")
+        return redirect(url_for('videos.watch_history'))
+
+    video = Video.query.filter(db.func.lower(Video.short_id) == short_id.lower()).first()
+    if video:
+        WatchHistory.query.filter_by(
+            username=current_user.username,
+            video_id=video.id
+        ).delete()
+        db.session.commit()
+        flash("Video removed from history.", "success")
+
+    return redirect(url_for('videos.watch_history'))

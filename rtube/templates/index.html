@@ -499,6 +499,11 @@
             var filename = '{{ filename }}'
             var mymarkers = JSON.parse('{{ markers | tojson }}');
             var startTime = {{ start_time | default(0) }};
+            {% if video and current_user.is_authenticated %}
+            var videoShortId = '{{ video.short_id }}';
+            {% else %}
+            var videoShortId = null;
+            {% endif %}
         </script>
     </head>
 

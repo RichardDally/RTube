@@ -102,6 +102,7 @@ Each video page includes a share button that copies the current URL to the clipb
 | `RTUBE_OIDC_SCOPES` | Space-separated OAuth2 scopes | `openid profile email` |
 | `RTUBE_OIDC_USERNAME_CLAIM` | Claim to use for username | `preferred_username` |
 | `RTUBE_OIDC_REDIRECT_URI` | Redirect URI for OIDC callback | `http://127.0.0.1:5000/auth/oidc/callback` |
+| `REQUESTS_CA_BUNDLE` | Path to custom CA certificate bundle for OIDC provider (standard Python env var) | System CA bundle |
 
 ## Authentication
 
@@ -195,6 +196,39 @@ export RTUBE_OIDC_USERNAME_CLAIM="preferred_username"
 5. User is logged in
 
 OIDC users can also use local credentials if they have a local account.
+
+#### Custom CA Certificate
+
+If your OIDC provider uses a self-signed certificate or a certificate signed by a private CA, you need to configure RTube to trust it. Flask-OIDC uses Python's `requests` library, which respects standard environment variables for CA certificates:
+
+```bash
+export REQUESTS_CA_BUNDLE=/path/to/custom-ca-bundle.pem
+```
+
+**Creating a combined CA bundle:**
+
+If you need to trust both system CAs and your custom CA:
+
+```bash
+# Linux/macOS
+cat /etc/ssl/certs/ca-certificates.crt /path/to/your-ca.pem > /path/to/combined-ca-bundle.pem
+export REQUESTS_CA_BUNDLE=/path/to/combined-ca-bundle.pem
+
+# Or add your CA to the system trust store (requires root)
+sudo cp your-ca.pem /usr/local/share/ca-certificates/your-ca.crt
+sudo update-ca-certificates
+```
+
+**Docker deployment:**
+
+When running RTube in Docker with a private CA:
+
+```dockerfile
+FROM python:3.11-slim
+COPY your-ca.pem /usr/local/share/ca-certificates/your-ca.crt
+RUN update-ca-certificates
+# ... rest of your Dockerfile
+```
 
 #### Testing OIDC Locally
 
