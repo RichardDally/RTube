@@ -9,14 +9,39 @@ Streaming platform Proof Of Concept.
 
 ## Installation
 
-### 1. Install Python dependencies
+### Option 1: Docker (Recommended)
+
+Pull and run the official Docker image:
+
+```bash
+docker pull yourusername/rtube:latest
+docker run -p 5000:5000 yourusername/rtube:latest
+```
+
+Or use docker-compose:
+
+```yaml
+services:
+  rtube:
+    image: yourusername/rtube:latest
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/home/richard/data
+    environment:
+      - RTUBE_SECRET_KEY=your-secret-key
+```
+
+### Option 2: Manual Installation
+
+#### 1. Install Python dependencies
 
 Using [uv](https://docs.astral.sh/uv/) (recommended):
 ```bash
 uv sync
 ```
 
-### 2. Install Node.js dependencies
+#### 2. Install Node.js dependencies
 
 ```bash
 cd rtube/static
@@ -403,11 +428,11 @@ export FLASK_APP=rtube.app:create_app  # Linux/macOS
 set FLASK_APP=rtube.app:create_app     # Windows
 ```
 
-## Publishing to PyPI
+## Publishing to PyPI and Docker Hub
 
-RTube includes a GitHub Actions workflow to build and publish packages to PyPI using [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) (OIDC).
+RTube includes a GitHub Actions workflow to build and publish packages to PyPI and Docker Hub.
 
-### Setup
+### PyPI Setup (Trusted Publishing)
 
 1. **Configure Trusted Publisher on PyPI**:
    - Go to [PyPI Publishing Settings](https://pypi.org/manage/account/publishing/)
@@ -427,7 +452,24 @@ RTube includes a GitHub Actions workflow to build and publish packages to PyPI u
    - Name: `pypi` (must match the name configured on PyPI)
    - Add protection rules if desired (e.g., required reviewers)
 
-No API tokens or secrets are required - authentication is handled automatically via OIDC.
+No API tokens or secrets are required for PyPI - authentication is handled automatically via OIDC.
+
+### Docker Hub Setup
+
+1. **Create a Docker Hub Access Token**:
+   - Log in to [Docker Hub](https://hub.docker.com/)
+   - Go to **Account Settings** > **Security** > **Access Tokens**
+   - Click **New Access Token**
+   - Name: `github-actions` (or any descriptive name)
+   - Permissions: **Read, Write, Delete**
+   - Click **Generate** and copy the token
+
+2. **Add GitHub Secrets**:
+   - Go to your repository on GitHub
+   - Navigate to **Settings** > **Secrets and variables** > **Actions**
+   - Add two secrets:
+     - `DOCKERHUB_USERNAME`: Your Docker Hub username
+     - `DOCKERHUB_TOKEN`: The access token generated above
 
 ### Triggering a Release
 
@@ -444,8 +486,9 @@ Or manually via the Actions tab using "workflow_dispatch".
 
 1. **Build**: Creates wheel and sdist using `uv build`
 2. **Publish to PyPI**: Uploads packages using OIDC trusted publishing
-3. **Create GitHub Release**: Creates a release with the built artifacts
-4. **Rollback on failure**: Logs errors and provides guidance if any step fails
+3. **Build and Push Docker**: Builds and pushes Docker image to Docker Hub (tagged with version and `latest`)
+4. **Create GitHub Release**: Creates a release with the built artifacts
+5. **Rollback on failure**: Logs errors and provides guidance if any step fails
 
 ### Git LFS side note
 * Download and install [Git Large File Storage](https://git-lfs.github.com/)

@@ -1,4 +1,4 @@
-name: Build and Publish to PyPI
+name: Build and Publish
 
 on:
   push:
@@ -10,6 +10,9 @@ on:
         description: 'Version tag to create (e.g., v0.1.0)'
         required: true
         type: string
+
+env:
+  DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/rtube
 
 jobs:
   build:
@@ -67,9 +70,45 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         # No password needed - uses OIDC trusted publishing
 
+  build-and-push-docker:
+    name: Build and Push Docker Image
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract version for tags
+        id: version
+        run: |
+          VERSION=${{ needs.build.outputs.version }}
+          # Remove 'v' prefix if present
+          VERSION_NUM=${VERSION#v}
+          echo "version_num=$VERSION_NUM" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ env.DOCKER_IMAGE }}:${{ steps.version.outputs.version_num }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   create-github-release:
     name: Create GitHub Release
-    needs: [build, publish-to-pypi]
+    needs: [build, publish-to-pypi, build-and-push-docker]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -96,7 +135,7 @@ jobs:
 
   rollback-on-failure:
     name: Rollback on failure
-    needs: [build, publish-to-pypi, create-github-release]
+    needs: [build, publish-to-pypi, build-and-push-docker, create-github-release]
     runs-on: ubuntu-latest
     if: failure()
     permissions:
@@ -106,7 +145,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Delete GitHub Release if created
-        if: needs.create-github-release.result == 'success' && (needs.publish-to-pypi.result == 'failure')
+        if: needs.create-github-release.result == 'success' && (needs.publish-to-pypi.result == 'failure' || needs.build-and-push-docker.result == 'failure')
         run: |
           gh release delete ${{ needs.build.outputs.version }} --yes || true
         env:
@@ -117,8 +156,10 @@ jobs:
           echo "::error::Pipeline failed. Manual intervention may be required."
           echo "Build result: ${{ needs.build.result }}"
           echo "PyPI publish result: ${{ needs.publish-to-pypi.result }}"
+          echo "Docker build result: ${{ needs.build-and-push-docker.result }}"
           echo "GitHub release result: ${{ needs.create-github-release.result }}"
           echo ""
-          echo "If PyPI publish succeeded but GitHub release failed, consider:"
+          echo "If some steps succeeded but others failed, consider:"
           echo "1. Manually creating the GitHub release"
           echo "2. Or yanking the PyPI release if needed"
+          echo "3. Or removing the Docker image tag if needed"
