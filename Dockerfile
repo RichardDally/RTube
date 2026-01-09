@@ -33,4 +33,4 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
     && cd /home/${USERNAME}/venv/lib/python${PYTHON_VERSION}/site-packages/rtube/static \
     && npm install
 
-CMD [".venv/bin/flask", "--app", "rtube", "run"]
+CMD ["venv/bin/flask", "--app", "rtube", "run"]
