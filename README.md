@@ -108,7 +108,11 @@ Then open http://127.0.0.1:5000 in your browser.
 
 ### Share Button
 
-Each video page includes a share button that copies the current URL to the clipboard. The button provides visual feedback when the URL is copied.
+Each video page includes a share button with two options:
+- **Copy link** - Copies the video URL to clipboard
+- **Copy link at timestamp** - Copies the URL with `?t=` parameter set to current playback position
+
+The button provides visual feedback when the URL is copied. Shared timestamp links automatically start playback at the specified time.
 
 ## Environment Variables
 

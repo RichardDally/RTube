@@ -313,6 +313,10 @@
             .btn-edit-video:hover {
                 background-color: #555;
             }
+            .share-dropdown {
+                position: relative;
+                display: inline-block;
+            }
             .btn-share {
                 padding: 8px 16px;
                 background-color: #444;
@@ -328,6 +332,47 @@
             }
             .btn-share.copied {
                 background-color: #4CAF50;
+            }
+            .share-menu {
+                display: none;
+                position: absolute;
+                bottom: 100%;
+                left: 0;
+                background-color: #333;
+                border-radius: 5px;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+                min-width: 180px;
+                z-index: 100;
+                margin-bottom: 5px;
+            }
+            .share-menu.active {
+                display: block;
+            }
+            .share-menu-item {
+                display: block;
+                width: 100%;
+                padding: 10px 15px;
+                background: none;
+                border: none;
+                color: white;
+                font-size: 13px;
+                text-align: left;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .share-menu-item:hover {
+                background-color: #444;
+            }
+            .share-menu-item:first-child {
+                border-radius: 5px 5px 0 0;
+            }
+            .share-menu-item:last-child {
+                border-radius: 0 0 5px 5px;
+            }
+            .share-menu-item .timestamp-preview {
+                color: #aaa;
+                font-size: 11px;
+                margin-left: 5px;
             }
             .btn-favorite {
                 padding: 8px 16px;
@@ -525,7 +570,13 @@
                 {% if description %}
                 <span class="video-description">{{ description }}</span>
                 {% endif %}
-                <button type="button" class="btn-share" onclick="shareVideo(this)">Share</button>
+                <div class="share-dropdown">
+                    <button type="button" class="btn-share" onclick="toggleShareMenu(this)">Share</button>
+                    <div class="share-menu" id="share-menu">
+                        <button type="button" class="share-menu-item" onclick="shareVideo(false)">Copy link</button>
+                        <button type="button" class="share-menu-item" onclick="shareVideo(true)">Copy link at <span id="share-timestamp">0:00</span></button>
+                    </div>
+                </div>
                 {% if current_user.is_authenticated and video %}
                 {% if is_favorite %}
                 <form method="post" action="{{ url_for('videos.remove_favorite', v=video.short_id) }}" style="display: inline;">
@@ -643,21 +694,85 @@
                 }
             }
 
-            function shareVideo(button) {
-                const url = window.location.href.split('#')[0];
+            function toggleShareMenu(button) {
+                const menu = document.getElementById('share-menu');
+                const isActive = menu.classList.contains('active');
+
+                // Close all other menus first
+                document.querySelectorAll('.share-menu.active').forEach(function(m) {
+                    m.classList.remove('active');
+                });
+
+                if (!isActive) {
+                    // Update timestamp display before showing menu
+                    updateShareTimestamp();
+                    menu.classList.add('active');
+                }
+            }
+
+            function updateShareTimestamp() {
+                const timestampSpan = document.getElementById('share-timestamp');
+                if (typeof player !== 'undefined' && player.currentTime) {
+                    const seconds = Math.floor(player.currentTime());
+                    timestampSpan.textContent = formatTime(seconds);
+                }
+            }
+
+            function formatTime(totalSeconds) {
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+
+                if (hours > 0) {
+                    return hours + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+                }
+                return minutes + ':' + String(seconds).padStart(2, '0');
+            }
+
+            function shareVideo(includeTimestamp) {
+                const baseUrl = window.location.origin + window.location.pathname;
+                const params = new URLSearchParams(window.location.search);
+
+                if (includeTimestamp && typeof player !== 'undefined' && player.currentTime) {
+                    const seconds = Math.floor(player.currentTime());
+                    if (seconds > 0) {
+                        params.set('t', seconds);
+                    } else {
+                        params.delete('t');
+                    }
+                } else {
+                    params.delete('t');
+                }
+
+                const url = baseUrl + (params.toString() ? '?' + params.toString() : '');
+                const shareButton = document.querySelector('.btn-share');
+
                 navigator.clipboard.writeText(url).then(function() {
-                    const originalText = button.textContent;
-                    button.textContent = 'Copied!';
-                    button.classList.add('copied');
+                    // Close menu
+                    document.getElementById('share-menu').classList.remove('active');
+
+                    // Show feedback on main button
+                    const originalText = shareButton.textContent;
+                    shareButton.textContent = 'Copied!';
+                    shareButton.classList.add('copied');
                     setTimeout(function() {
-                        button.textContent = originalText;
-                        button.classList.remove('copied');
+                        shareButton.textContent = originalText;
+                        shareButton.classList.remove('copied');
                     }, 2000);
                 }).catch(function(err) {
                     console.error('Failed to copy URL:', err);
                     alert('Failed to copy URL to clipboard');
                 });
             }
+
+            // Close share menu when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('.share-dropdown')) {
+                    document.querySelectorAll('.share-menu.active').forEach(function(menu) {
+                        menu.classList.remove('active');
+                    });
+                }
+            });
 
             function openPlaylistModal() {
                 const modal = document.getElementById('playlist-modal');
