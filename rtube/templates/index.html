@@ -73,6 +73,18 @@
                 flex-direction: column;
                 align-items: center;
             }
+            /* Hide video fallback text by default - Video.js will show its own error */
+            .video-fallback {
+                display: none;
+            }
+            /* Show fallback only when Video.js failed to load */
+            .vjs-error .video-fallback,
+            .video-js-failed .video-fallback {
+                display: block;
+                color: #fff;
+                text-align: center;
+                padding: 20px;
+            }
             .video-title {
                 color: #fff;
                 font-family: Arial, sans-serif;
@@ -687,7 +699,7 @@
             <h1 class="video-title">{{ filename }}</h1>
             <video-js id="RPlayer" class="vjs-default-skin" controls preload="auto" width="1280" height="720">
                 <source src="{{ video_url }}" type="application/x-mpegURL">
-                Your browser doesn't support video tag.
+                <p class="video-fallback">Your browser doesn't support video tag or Video.js failed to load.</p>
             </video-js>
             <div class="video-meta">
                 {% if video and video.owner_username %}
