@@ -72,6 +72,7 @@ def upload_video():
     filename_base = video.short_id
     video.filename = filename_base
     video.thumbnail = f"{filename_base}.jpg"
+    video.preview = f"{filename_base}_preview.webm"
 
     # Save uploaded file to instance folder
     videos_folder = Path(current_app.config["VIDEOS_FOLDER"])
@@ -93,8 +94,9 @@ def upload_video():
     # Start encoding
     output_path = videos_folder / f"{filename_base}.m3u8"
     thumbnail_path = Path(current_app.config["THUMBNAILS_FOLDER"]) / video.thumbnail
+    preview_path = Path(current_app.config["THUMBNAILS_FOLDER"]) / video.preview
     keep_original = current_app.config.get("KEEP_ORIGINAL_VIDEO", False)
-    encoder_service.encode_video(job.id, input_path, output_path, qualities, delete_original=not keep_original, thumbnail_path=thumbnail_path)
+    encoder_service.encode_video(job.id, input_path, output_path, qualities, delete_original=not keep_original, thumbnail_path=thumbnail_path, preview_path=preview_path)
 
     return redirect(url_for('encoding.encoding_status', job_id=job.id))
 

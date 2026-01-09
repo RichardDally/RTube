@@ -36,13 +36,37 @@
             .video-list a:hover {
                 background-color: #3a3a3a;
             }
-            .thumbnail {
+            .thumbnail-container {
+                position: relative;
                 width: 160px;
                 height: 90px;
+                flex-shrink: 0;
+                border-radius: 4px;
+                overflow: hidden;
+                background-color: #444;
+            }
+            .thumbnail {
+                width: 100%;
+                height: 100%;
                 object-fit: cover;
                 border-radius: 4px;
                 background-color: #444;
-                flex-shrink: 0;
+            }
+            .thumbnail-preview {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            }
+            .thumbnail-container:hover .thumbnail-preview {
+                opacity: 1;
+            }
+            .thumbnail-container:hover .thumbnail {
+                opacity: 0;
             }
             .video-info {
                 flex: 1;
@@ -415,11 +439,16 @@
                     {% for video in results_by_title %}
                     <li>
                         <a href="/watch?v={{ video.short_id }}">
-                            {% if video.thumbnail %}
-                            <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
-                            {% else %}
-                            <div class="thumbnail"></div>
-                            {% endif %}
+                            <div class="thumbnail-container">
+                                {% if video.thumbnail %}
+                                <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
+                                {% else %}
+                                <div class="thumbnail"></div>
+                                {% endif %}
+                                {% if video.preview %}
+                                <video class="thumbnail-preview" muted="muted" loop playsinline preload="none" data-src="{{ url_for('videos.serve_thumbnail', filename=video.preview) }}"></video>
+                                {% endif %}
+                            </div>
                             <div class="video-info">
                                 <span class="video-title">{{ video.title or video.filename }}</span>
                                 <div class="video-meta">
@@ -452,11 +481,16 @@
                     {% for video in results_by_description %}
                     <li>
                         <a href="/watch?v={{ video.short_id }}">
-                            {% if video.thumbnail %}
-                            <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
-                            {% else %}
-                            <div class="thumbnail"></div>
-                            {% endif %}
+                            <div class="thumbnail-container">
+                                {% if video.thumbnail %}
+                                <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
+                                {% else %}
+                                <div class="thumbnail"></div>
+                                {% endif %}
+                                {% if video.preview %}
+                                <video class="thumbnail-preview" muted="muted" loop playsinline preload="none" data-src="{{ url_for('videos.serve_thumbnail', filename=video.preview) }}"></video>
+                                {% endif %}
+                            </div>
                             <div class="video-info">
                                 <span class="video-title">{{ video.title or video.filename }}</span>
                                 <div class="video-meta">
@@ -489,11 +523,16 @@
                     {% for video in results_by_author %}
                     <li>
                         <a href="/watch?v={{ video.short_id }}">
-                            {% if video.thumbnail %}
-                            <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
-                            {% else %}
-                            <div class="thumbnail"></div>
-                            {% endif %}
+                            <div class="thumbnail-container">
+                                {% if video.thumbnail %}
+                                <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
+                                {% else %}
+                                <div class="thumbnail"></div>
+                                {% endif %}
+                                {% if video.preview %}
+                                <video class="thumbnail-preview" muted="muted" loop playsinline preload="none" data-src="{{ url_for('videos.serve_thumbnail', filename=video.preview) }}"></video>
+                                {% endif %}
+                            </div>
                             <div class="video-info">
                                 <span class="video-title">{{ video.title or video.filename }}</span>
                                 <div class="video-meta">
@@ -527,11 +566,16 @@
             {% for video in videos %}
             <li>
                 <a href="/watch?v={{ video.short_id }}">
-                    {% if video.thumbnail %}
-                    <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
-                    {% else %}
-                    <div class="thumbnail"></div>
-                    {% endif %}
+                    <div class="thumbnail-container">
+                        {% if video.thumbnail %}
+                        <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
+                        {% else %}
+                        <div class="thumbnail"></div>
+                        {% endif %}
+                        {% if video.preview %}
+                        <video class="thumbnail-preview" muted="muted" loop playsinline preload="none" data-src="{{ url_for('videos.serve_thumbnail', filename=video.preview) }}"></video>
+                        {% endif %}
+                    </div>
                     <div class="video-info">
                         <span class="video-title">{{ video.title }}</span>
                         <div class="video-meta">
@@ -558,5 +602,48 @@
         <p class="empty-message">No videos available.</p>
         {% endif %}
         <footer>RTube v{{ rtube_version }}</footer>
+        <script>
+            // Video preview on hover - lazy load and play
+            console.log('Initializing video previews...');
+            var containers = document.querySelectorAll('.thumbnail-container');
+            console.log('Found', containers.length, 'thumbnail containers');
+
+            containers.forEach(function(container, index) {
+                var video = container.querySelector('.thumbnail-preview');
+                if (!video) {
+                    console.log('Container', index, 'has no preview video');
+                    return;
+                }
+
+                console.log('Container', index, 'preview src:', video.dataset.src);
+                var loaded = false;
+
+                container.addEventListener('mouseenter', function(e) {
+                    console.log('Mouse enter on container', index);
+                    // Lazy load the video src on first hover
+                    if (!loaded && video.dataset.src) {
+                        console.log('Setting video src to:', video.dataset.src);
+                        video.src = video.dataset.src;
+                        loaded = true;
+                    }
+                    // Play the video
+                    video.currentTime = 0;
+                    console.log('Calling play(), video.src =', video.src, 'readyState =', video.readyState);
+                    var playPromise = video.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(function() {
+                            console.log('Video', index, 'playing successfully');
+                        }).catch(function(e) {
+                            console.log('Video', index, 'play failed:', e.name, '-', e.message);
+                        });
+                    }
+                });
+
+                container.addEventListener('mouseleave', function() {
+                    video.pause();
+                    video.currentTime = 0;
+                });
+            });
+        </script>
     </body>
 </html>

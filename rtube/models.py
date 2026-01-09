@@ -33,6 +33,7 @@ class Video(db.Model):
     language = db.Column(db.String(10), nullable=True)  # ISO 639-1 code (e.g., "en", "fr")
     visibility = db.Column(db.String(20), nullable=False, default=VideoVisibility.PUBLIC.value)
     thumbnail = db.Column(db.String(255), nullable=True)
+    preview = db.Column(db.String(255), nullable=True)  # Short video preview for hover
     view_count = db.Column(db.Integer, default=0, nullable=False)
     owner_username = db.Column(db.String(80), nullable=True)  # Username of the uploader
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

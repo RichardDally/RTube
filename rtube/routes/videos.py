@@ -53,6 +53,7 @@ def get_available_videos(include_private: bool = False):
                 "visibility": video.visibility,
                 "view_count": video.view_count,
                 "thumbnail": video.thumbnail,
+                "preview": video.preview,
                 "owner_username": video.owner_username
             })
 

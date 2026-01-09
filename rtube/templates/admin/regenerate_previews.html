@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>RTube - Admin - Regenerate Previews</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #1a1a1a;
+                color: #fff;
+            }
+            h1 {
+                margin-bottom: 10px;
+            }
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 30px;
+            }
+            .header-left {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+            }
+            .back-link {
+                color: #888;
+                text-decoration: none;
+                font-size: 14px;
+            }
+            .back-link:hover {
+                color: #fff;
+            }
+            .video-count {
+                color: #888;
+                font-size: 14px;
+            }
+            .description {
+                color: #888;
+                font-size: 14px;
+                margin-bottom: 20px;
+                line-height: 1.5;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                background-color: #2a2a2a;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            th, td {
+                padding: 15px;
+                text-align: left;
+                border-bottom: 1px solid #333;
+            }
+            th {
+                background-color: #333;
+                font-weight: 600;
+                color: #aaa;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            tr:last-child td {
+                border-bottom: none;
+            }
+            tr:hover {
+                background-color: #333;
+            }
+            .checkbox-cell {
+                width: 40px;
+                text-align: center;
+            }
+            .checkbox-cell input[type="checkbox"] {
+                width: 18px;
+                height: 18px;
+                cursor: pointer;
+                accent-color: #4CAF50;
+            }
+            .video-title {
+                font-weight: 500;
+                color: #fff;
+                word-break: break-all;
+            }
+            .video-owner {
+                color: #888;
+                font-size: 13px;
+            }
+            .thumbnail {
+                width: 80px;
+                height: 45px;
+                object-fit: cover;
+                border-radius: 4px;
+                background-color: #333;
+            }
+            .no-thumbnail {
+                width: 80px;
+                height: 45px;
+                background-color: #333;
+                border-radius: 4px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #666;
+                font-size: 10px;
+            }
+            .empty-message {
+                text-align: center;
+                color: #888;
+                padding: 40px;
+                font-style: italic;
+                background-color: #2a2a2a;
+                border-radius: 8px;
+            }
+            .flash-messages {
+                margin-bottom: 20px;
+            }
+            .flash-message {
+                padding: 12px;
+                border-radius: 4px;
+                margin-bottom: 10px;
+                font-size: 14px;
+            }
+            .flash-error {
+                background-color: #5c1a1a;
+                color: #ff6b6b;
+                border: 1px solid #8B0000;
+            }
+            .flash-success {
+                background-color: #1a3d1a;
+                color: #81C784;
+                border: 1px solid #2E7D32;
+            }
+            .flash-warning {
+                background-color: #4a3d1a;
+                color: #FFB74D;
+                border: 1px solid #FF9800;
+            }
+            .actions {
+                margin-top: 20px;
+                display: flex;
+                gap: 15px;
+                align-items: center;
+            }
+            .btn-generate {
+                padding: 10px 20px;
+                background-color: #1565C0;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 14px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .btn-generate:hover {
+                background-color: #1976D2;
+            }
+            .btn-generate:disabled {
+                background-color: #555;
+                cursor: not-allowed;
+            }
+            .select-all-label {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                color: #888;
+                font-size: 14px;
+                cursor: pointer;
+            }
+            .select-all-label input[type="checkbox"] {
+                width: 16px;
+                height: 16px;
+                accent-color: #4CAF50;
+            }
+            .selected-count {
+                color: #1565C0;
+                font-size: 14px;
+            }
+            footer {
+                margin-top: 50px;
+                padding-top: 20px;
+                border-top: 1px solid #333;
+                text-align: center;
+                color: #666;
+                font-size: 12px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="header-left">
+                <a href="{{ url_for('admin.users') }}" class="back-link">&larr; Back to Users</a>
+                <h1>Regenerate Previews</h1>
+            </div>
+            <span class="video-count">{{ videos | length }} video{{ 's' if videos | length != 1 else '' }} missing preview{{ 's' if videos | length != 1 else '' }}</span>
+        </div>
+
+        <p class="description">
+            This page lists videos that don't have a preview clip for hover display.
+            Select the videos you want to generate previews for. This may take some time depending on the number of videos.
+        </p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% if videos %}
+        <form method="post" action="{{ url_for('admin.regenerate_previews_submit') }}" id="generate-form">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="checkbox-cell">
+                            <input type="checkbox" id="select-all" title="Select all">
+                        </th>
+                        <th>Thumbnail</th>
+                        <th>Title</th>
+                        <th>Owner</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for video in videos %}
+                    <tr>
+                        <td class="checkbox-cell">
+                            <input type="checkbox" name="videos" value="{{ video.id }}" class="video-checkbox">
+                        </td>
+                        <td>
+                            {% if video.thumbnail %}
+                            <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
+                            {% else %}
+                            <div class="no-thumbnail">No thumb</div>
+                            {% endif %}
+                        </td>
+                        <td class="video-title">{{ video.title or video.filename }}</td>
+                        <td class="video-owner">{{ video.owner_username or 'Unknown' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="actions">
+                <label class="select-all-label">
+                    <input type="checkbox" id="select-all-bottom">
+                    Select all
+                </label>
+                <span class="selected-count" id="selected-count">0 selected</span>
+                <button type="submit" class="btn-generate" id="generate-btn" disabled>Generate Previews</button>
+            </div>
+        </form>
+
+        <script>
+            const checkboxes = document.querySelectorAll('.video-checkbox');
+            const selectAllTop = document.getElementById('select-all');
+            const selectAllBottom = document.getElementById('select-all-bottom');
+            const selectedCount = document.getElementById('selected-count');
+            const generateBtn = document.getElementById('generate-btn');
+
+            function updateUI() {
+                const checked = document.querySelectorAll('.video-checkbox:checked').length;
+                const total = checkboxes.length;
+
+                selectedCount.textContent = checked + ' selected';
+                generateBtn.disabled = checked === 0;
+
+                const allChecked = checked === total;
+                selectAllTop.checked = allChecked;
+                selectAllBottom.checked = allChecked;
+                selectAllTop.indeterminate = checked > 0 && checked < total;
+                selectAllBottom.indeterminate = checked > 0 && checked < total;
+            }
+
+            function toggleAll(checked) {
+                checkboxes.forEach(cb => cb.checked = checked);
+                updateUI();
+            }
+
+            selectAllTop.addEventListener('change', () => toggleAll(selectAllTop.checked));
+            selectAllBottom.addEventListener('change', () => toggleAll(selectAllBottom.checked));
+            checkboxes.forEach(cb => cb.addEventListener('change', updateUI));
+        </script>
+        {% else %}
+        <p class="empty-message">All videos have previews. Nothing to generate.</p>
+        {% endif %}
+
+        <footer>RTube v{{ rtube_version }}</footer>
+    </body>
+</html>

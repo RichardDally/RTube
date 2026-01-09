@@ -227,6 +227,7 @@ def import_videos_submit():
 
     imported_count = 0
     thumbnail_count = 0
+    preview_count = 0
     for filename in selected_filenames:
         # Validate that this is indeed an orphan video
         if filename not in orphan_filenames:
@@ -243,6 +244,13 @@ def import_videos_submit():
             videos_folder, filename, thumbnail_path
         )
 
+        # Generate preview
+        preview_filename = f"{filename}_preview.webm"
+        preview_path = thumbnails_folder / preview_filename
+        preview_generated = encoder_service.generate_preview_from_hls(
+            videos_folder, filename, preview_path
+        )
+
         # Create new video entry
         video = Video(
             filename=filename,
@@ -250,17 +258,72 @@ def import_videos_submit():
             visibility=VideoVisibility.PRIVATE.value,
             owner_username=current_user.username,
             thumbnail=thumbnail_filename if thumbnail_generated else None,
+            preview=preview_filename if preview_generated else None,
         )
         db.session.add(video)
         imported_count += 1
         if thumbnail_generated:
             thumbnail_count += 1
+        if preview_generated:
+            preview_count += 1
 
     if imported_count > 0:
         db.session.commit()
-        logger.info(f"Admin '{current_user.username}' imported {imported_count} orphan video(s) with {thumbnail_count} thumbnail(s)")
-        flash(f'Successfully imported {imported_count} video(s) with {thumbnail_count} thumbnail(s)', 'success')
+        logger.info(f"Admin '{current_user.username}' imported {imported_count} orphan video(s) with {thumbnail_count} thumbnail(s) and {preview_count} preview(s)")
+        flash(f'Successfully imported {imported_count} video(s) with {thumbnail_count} thumbnail(s) and {preview_count} preview(s)', 'success')
     else:
         flash('No videos were imported', 'warning')
 
     return redirect(url_for('admin.import_videos'))
+
+
+@admin_bp.route('/regenerate-previews')
+@login_required
+@admin_required
+def regenerate_previews():
+    """Show videos that are missing previews."""
+    videos = Video.query.filter(
+        (Video.preview == None) | (Video.preview == '')
+    ).order_by(Video.created_at.desc()).all()
+    return render_template('admin/regenerate_previews.html', videos=videos)
+
+
+@admin_bp.route('/regenerate-previews', methods=['POST'])
+@login_required
+@admin_required
+def regenerate_previews_submit():
+    """Regenerate previews for selected videos."""
+    selected_ids = request.form.getlist('videos')
+
+    if not selected_ids:
+        flash('No videos selected', 'error')
+        return redirect(url_for('admin.regenerate_previews'))
+
+    videos_folder = Path(current_app.config.get('VIDEOS_FOLDER', ''))
+    thumbnails_folder = Path(current_app.config.get('THUMBNAILS_FOLDER', ''))
+
+    preview_count = 0
+    for video_id in selected_ids:
+        video = db.session.get(Video, int(video_id))
+        if not video:
+            continue
+
+        # Generate preview
+        preview_filename = f"{video.filename}_preview.webm"
+        preview_path = thumbnails_folder / preview_filename
+        preview_generated = encoder_service.generate_preview_from_hls(
+            videos_folder, video.filename, preview_path
+        )
+
+        if preview_generated:
+            video.preview = preview_filename
+            preview_count += 1
+
+    if preview_count > 0:
+        db.session.commit()
+        logger.info(f"Admin '{current_user.username}' regenerated {preview_count} preview(s)")
+        flash(f'Successfully generated {preview_count} preview(s)', 'success')
+    else:
+        flash('No previews were generated', 'warning')
+
+    return redirect(url_for('admin.regenerate_previews'))
