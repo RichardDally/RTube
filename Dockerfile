@@ -30,8 +30,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
        else \
            uv pip install rtube; \
        fi \
-    && cd /home/${USERNAME}/venv/lib/python${PYTHON_VERSION}/site-packages/rtube/static && npm install
+    && cd /home/${USERNAME}/venv/lib/python${PYTHON_VERSION}/site-packages/rtube/static \
+    && npm install
 
-EXPOSE 5000
-
-CMD ["python", "-m", "rtube"]
+CMD [".venv/bin/flask", "--app", "rtube", "run"]
