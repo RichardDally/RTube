@@ -3,7 +3,7 @@ from pathlib import Path
 from flask import Blueprint, render_template, current_app, flash, redirect, url_for, request, abort, send_from_directory
 from flask_login import current_user, login_required
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from rtube.models import db, Video, VideoVisibility, Comment, EncodingJob, Favorite, PlaylistVideo, WatchHistory
 from rtube.models_auth import User, UserRole
 
@@ -131,6 +131,55 @@ def search_videos(query: str, include_private: bool = False):
     )
 
 
+def get_recommended_videos(current_video: Video, limit: int = 10, include_private: bool = False) -> list:
+    """Get recommended videos based on the current video.
+
+    Scoring criteria:
+    - Same author: +3 points
+    - Same language: +2 points
+    - Popular videos: +1 point per 100 views (max +3)
+    - Recent videos (within 30 days): +1 point
+    """
+    # Base query - exclude current video
+    query = Video.query.filter(Video.id != current_video.id)
+
+    # Filter visibility
+    if not include_private:
+        query = query.filter(Video.visibility == VideoVisibility.PUBLIC.value)
+
+    candidates = query.all()
+
+    # Score each video
+    scored = []
+    now = datetime.utcnow()
+    thirty_days_ago = now - timedelta(days=30)
+
+    for video in candidates:
+        score = 0
+
+        # Same author (+3)
+        if video.owner_username and video.owner_username == current_video.owner_username:
+            score += 3
+
+        # Same language (+2)
+        if video.language and video.language == current_video.language:
+            score += 2
+
+        # Popular videos (+1 per 100 views, max +3)
+        score += min(video.view_count // 100, 3)
+
+        # Recent videos (+1)
+        if video.created_at and video.created_at >= thirty_days_ago:
+            score += 1
+
+        scored.append((score, video))
+
+    # Sort by score (desc), then by view_count (desc)
+    scored.sort(key=lambda x: (x[0], x[1].view_count), reverse=True)
+
+    return [video for score, video in scored[:limit]]
+
+
 @videos_bp.route('/watch/<path:invalid_path>')
 def watch_video_invalid_url(invalid_path):
     """Handle malformed URLs like /watch/VIDEO_ID instead of /watch?v=VIDEO_ID"""
@@ -190,6 +239,13 @@ def watch_video():
             video_id=video.id
         ).first() is not None
 
+    # Get recommended videos (include private only if user is authenticated)
+    recommended_videos = get_recommended_videos(
+        video,
+        limit=10,
+        include_private=current_user.is_authenticated
+    )
+
     video_url = url_for('videos.serve_video', filename=f"{video.filename}.m3u8")
     logger.info(f"Loading video from [{video_url}]")
     return render_template(
@@ -202,6 +258,7 @@ def watch_video():
         video=video,
         start_time=start_time,
         is_favorite=is_favorite,
+        recommended_videos=recommended_videos,
     )
 
 

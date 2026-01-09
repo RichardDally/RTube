@@ -10,12 +10,9 @@
             body {
                 margin: 0;
                 background-color: #1a1a1a;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
                 min-height: 100vh;
                 transition: background-color 0.3s ease;
+                padding-top: 60px;
             }
             /* Theater mode styles */
             body.theater-mode {
@@ -72,6 +69,14 @@
                 display: flex;
                 flex-direction: column;
                 align-items: center;
+                width: 100%;
+            }
+            /* Make video player responsive */
+            #RPlayer {
+                width: 100% !important;
+                max-width: 1100px;
+                height: auto !important;
+                aspect-ratio: 16 / 9;
             }
             /* Hide video fallback text by default - Video.js will show its own error */
             .video-fallback {
@@ -92,7 +97,8 @@
                 font-weight: bold;
                 text-align: center;
                 margin-bottom: 15px;
-                max-width: 1280px;
+                max-width: 100%;
+                word-wrap: break-word;
             }
             .video-meta {
                 display: flex;
@@ -120,7 +126,8 @@
                 max-width: 600px;
             }
             .comments-section {
-                width: 1280px;
+                width: 100%;
+                max-width: 1280px;
                 margin-top: 30px;
                 font-family: Arial, sans-serif;
             }
@@ -678,6 +685,120 @@
             .modal-close:hover {
                 color: #fff;
             }
+            /* Two-column watch layout */
+            .watch-layout {
+                display: flex;
+                gap: 24px;
+                max-width: 1700px;
+                margin: 0 auto;
+                padding: 20px;
+                width: 100%;
+                box-sizing: border-box;
+                align-items: flex-start;
+            }
+            .watch-main {
+                flex: 1;
+                min-width: 0;
+                max-width: 1100px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            .watch-sidebar {
+                width: 400px;
+                flex-shrink: 0;
+                position: sticky;
+                top: 80px;
+                max-height: calc(100vh - 100px);
+                overflow-y: auto;
+            }
+            /* Recommended videos sidebar */
+            .recommended-videos {
+                background-color: #2a2a2a;
+                border-radius: 8px;
+                padding: 15px;
+            }
+            .recommended-videos h3 {
+                margin: 0 0 15px 0;
+                font-size: 16px;
+                font-family: Arial, sans-serif;
+                color: #fff;
+            }
+            .recommended-item {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 12px;
+                text-decoration: none;
+                color: inherit;
+                padding: 8px;
+                border-radius: 4px;
+                transition: background-color 0.2s;
+            }
+            .recommended-item:hover {
+                background-color: #333;
+            }
+            .recommended-thumb {
+                width: 160px;
+                height: 90px;
+                object-fit: cover;
+                border-radius: 4px;
+                background-color: #444;
+                flex-shrink: 0;
+            }
+            .recommended-info {
+                flex: 1;
+                min-width: 0;
+            }
+            .recommended-title {
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                font-weight: 500;
+                line-height: 1.3;
+                color: #fff;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+                margin-bottom: 5px;
+            }
+            .recommended-meta {
+                font-family: Arial, sans-serif;
+                font-size: 12px;
+                color: #888;
+                line-height: 1.4;
+            }
+            .no-recommendations {
+                color: #888;
+                font-size: 13px;
+                font-family: Arial, sans-serif;
+                font-style: italic;
+                text-align: center;
+                padding: 20px;
+            }
+            /* Responsive: stack on smaller screens */
+            @media (max-width: 1400px) {
+                .watch-layout {
+                    flex-direction: column;
+                    align-items: center;
+                }
+                .watch-main {
+                    max-width: 100%;
+                }
+                .watch-sidebar {
+                    width: 100%;
+                    max-width: 1100px;
+                    position: static;
+                    max-height: none;
+                }
+            }
+            /* Theater mode adjustments for layout */
+            body.theater-mode .watch-layout {
+                max-width: none;
+                padding: 0;
+            }
+            body.theater-mode .watch-sidebar {
+                display: none;
+            }
         </style>
         <script>
             var filename = '{{ filename }}'
@@ -695,6 +816,8 @@
         <div class="header">
             <a href="/">RTube</a>
         </div>
+        <div class="watch-layout">
+        <div class="watch-main">
         <div class="video-container">
             <h1 class="video-title">{{ filename }}</h1>
             <video-js id="RPlayer" class="vjs-default-skin" controls preload="auto" width="1280" height="720">
@@ -849,6 +972,36 @@
             {% endif %}
         </div>
         {% endif %}
+        </div><!-- end watch-main -->
+
+        <!-- Recommended Videos Sidebar -->
+        <aside class="watch-sidebar">
+            <div class="recommended-videos">
+                <h3>Recommended Videos</h3>
+                {% if recommended_videos %}
+                {% for rec_video in recommended_videos %}
+                <a href="{{ url_for('videos.watch_video', v=rec_video.short_id) }}" class="recommended-item">
+                    {% if rec_video.thumbnail %}
+                    <img src="{{ url_for('videos.serve_thumbnail', filename=rec_video.thumbnail) }}"
+                         alt="{{ rec_video.title or rec_video.filename }}" class="recommended-thumb">
+                    {% else %}
+                    <div class="recommended-thumb"></div>
+                    {% endif %}
+                    <div class="recommended-info">
+                        <div class="recommended-title">{{ rec_video.title or rec_video.filename }}</div>
+                        <div class="recommended-meta">
+                            {{ rec_video.owner_username or 'Unknown' }}<br>
+                            {{ rec_video.view_count }} view{{ 's' if rec_video.view_count != 1 else '' }}
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+                {% else %}
+                <p class="no-recommendations">No recommendations available.</p>
+                {% endif %}
+            </div>
+        </aside>
+        </div><!-- end watch-layout -->
 
         <script src="{{ url_for('static', filename='node_modules/video.js/dist/video.min.js')}}"></script>
         <script src="{{ url_for('static', filename='node_modules/videojs-contrib-quality-levels/dist/videojs-contrib-quality-levels.min.js')}}"></script>
