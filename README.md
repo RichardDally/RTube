@@ -500,7 +500,7 @@ git push origin v0.3.0
 ### Workflow Steps
 
 1. **Bump Version** (manual trigger only): Updates version in source files, commits, and creates tag
-2. **Build Wheel**: Creates wheel and sdist using `uv build`
+2. **Build Wheel**: Runs pytest, then creates wheel and sdist using `uv build`
 3. **Build Docker**: Builds Docker image using the wheel (validates image builds correctly)
 4. **Publish to PyPI**: Uploads packages using OIDC trusted publishing (only after Docker build succeeds)
 5. **Push Docker**: Pushes Docker image to Docker Hub (only after Docker build succeeds)
