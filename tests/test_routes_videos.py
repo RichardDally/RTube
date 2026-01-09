@@ -253,10 +253,12 @@ class TestDeleteCommentRoute:
             follow_redirects=True
         )
 
-        # Check comment was deleted
+        # Check comment was soft deleted (marked as deleted, not removed)
         with app.app_context():
             comment = Comment.query.get(comment_id)
-            assert comment is None
+            assert comment is not None
+            assert comment.is_deleted is True
+            assert comment.deleted_by == 'owner'
 
     def test_delete_other_user_comment_forbidden(self, authenticated_client, sample_video, app):
         """Test that user cannot delete another user's comment."""
@@ -303,10 +305,12 @@ class TestDeleteCommentRoute:
             follow_redirects=True
         )
 
-        # Check comment was deleted by admin
+        # Check comment was soft deleted by admin
         with app.app_context():
             comment = Comment.query.get(comment_id)
-            assert comment is None
+            assert comment is not None
+            assert comment.is_deleted is True
+            assert comment.deleted_by == 'admin'
 
     def test_delete_nonexistent_comment(self, authenticated_client, sample_video):
         """Test deleting a non-existent comment returns 404."""

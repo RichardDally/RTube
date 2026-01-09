@@ -73,11 +73,35 @@ class Comment(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     video_id = db.Column(db.Integer, db.ForeignKey("videos.id"), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey("comments.id"), nullable=True)
     author_username = db.Column(db.String(80), nullable=False)
     content = db.Column(db.Text, nullable=False)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    deleted_by = db.Column(db.String(20), nullable=True)  # 'owner' or 'admin'
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     video = db.relationship("Video", backref=db.backref("comments", lazy=True, order_by="Comment.created_at.desc()"))
+    replies = db.relationship("Comment", backref=db.backref("parent", remote_side=[id]), lazy=True, order_by="Comment.created_at.asc()")
+
+    def is_reply(self) -> bool:
+        """Check if this comment is a reply to another comment."""
+        return self.parent_id is not None
+
+    def get_reply_count(self) -> int:
+        """Get the number of replies to this comment (excluding deleted)."""
+        return sum(1 for r in self.replies if not r.is_deleted)
+
+    def get_all_replies_count(self) -> int:
+        """Get total replies including deleted (for display purposes)."""
+        return len(self.replies)
+
+    def deleted_by_admin(self) -> bool:
+        """Check if comment was deleted by an admin."""
+        return self.is_deleted and self.deleted_by == 'admin'
+
+    def deleted_by_owner(self) -> bool:
+        """Check if comment was deleted by the owner."""
+        return self.is_deleted and self.deleted_by == 'owner'
 
 
 class Favorite(db.Model):

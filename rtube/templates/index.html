@@ -284,6 +284,86 @@
             .comment-content a:hover {
                 text-decoration: underline;
             }
+            /* Threaded replies */
+            .btn-reply {
+                background: none;
+                border: none;
+                color: #888;
+                font-size: 12px;
+                cursor: pointer;
+                padding: 2px 8px;
+            }
+            .btn-reply:hover {
+                color: #4CAF50;
+            }
+            .reply-form {
+                display: none;
+                margin-top: 10px;
+                padding: 10px;
+                background-color: #333;
+                border-radius: 5px;
+            }
+            .reply-form.active {
+                display: block;
+            }
+            .reply-form textarea {
+                width: 100%;
+                min-height: 60px;
+                padding: 10px;
+                border: 1px solid #444;
+                border-radius: 5px;
+                background-color: #2a2a2a;
+                color: #fff;
+                font-size: 14px;
+                resize: vertical;
+                box-sizing: border-box;
+            }
+            .reply-form textarea:focus {
+                outline: none;
+                border-color: #4CAF50;
+            }
+            .reply-form-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 8px;
+            }
+            .replies-list {
+                list-style: none;
+                padding: 0;
+                margin: 10px 0 0 20px;
+                border-left: 2px solid #444;
+                padding-left: 15px;
+            }
+            .reply-item {
+                background-color: #252525;
+                border-radius: 5px;
+                padding: 12px;
+                margin-bottom: 10px;
+            }
+            .reply-item:last-child {
+                margin-bottom: 0;
+            }
+            .reply-toggle {
+                background: none;
+                border: none;
+                color: #4CAF50;
+                font-size: 12px;
+                cursor: pointer;
+                padding: 5px 0;
+                margin-top: 5px;
+            }
+            /* Deleted/redacted comments - only style direct children, not nested replies */
+            .comment-deleted > .comment-header {
+                opacity: 0.6;
+            }
+            .comment-deleted > .comment-content {
+                opacity: 0.6;
+                color: #888;
+                font-style: italic;
+            }
+            .comment-deleted > .comment-header .comment-author {
+                color: #666;
+            }
             .no-comments {
                 color: #888;
                 font-style: italic;
@@ -671,13 +751,13 @@
             <p class="login-prompt"><a href="{{ url_for('auth.login') }}">Log in</a> to post a comment.</p>
             {% endif %}
 
-            {% if video.comments %}
-            <ul class="comment-list">
-                {% for comment in video.comments %}
-                <li class="comment-item" id="comment-{{ comment.id }}">
-                    <div class="comment-header">
-                        <a href="{{ url_for('auth.user_profile', username=comment.author_username) }}" class="comment-author">{{ comment.author_username }}</a>
-                        <span class="comment-date">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+            {# Recursive macro for rendering comments and replies #}
+            {% macro render_comment(comment, is_reply=false) %}
+            <li class="{{ 'reply-item' if is_reply else 'comment-item' }}{{ ' comment-deleted' if comment.is_deleted else '' }}" id="comment-{{ comment.id }}">
+                <div class="comment-header">
+                    <a href="{{ url_for('auth.user_profile', username=comment.author_username) }}" class="comment-author">{{ comment.author_username }}</a>
+                    <span class="comment-date">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                    {% if not comment.is_deleted %}
                         {% if current_user.is_authenticated and comment.author_username == current_user.username %}
                         <div class="comment-actions">
                             <button type="button" class="btn-edit" onclick="toggleEditForm({{ comment.id }})">Edit</button>
@@ -694,19 +774,62 @@
                             </form>
                         </div>
                         {% endif %}
-                    </div>
-                    <div class="comment-content" id="comment-content-{{ comment.id }}">{{ comment.content | urlize }}</div>
-                    {% if current_user.is_authenticated and comment.author_username == current_user.username %}
-                    <form class="edit-form" id="edit-form-{{ comment.id }}" method="post" action="{{ url_for('videos.edit_comment', v=video.short_id) }}">
-                        <input type="hidden" name="comment_id" value="{{ comment.id }}">
-                        <textarea name="content" maxlength="5000">{{ comment.content }}</textarea>
-                        <div class="edit-form-actions">
-                            <button type="submit" class="btn-save">Save</button>
-                            <button type="button" class="btn-cancel" onclick="toggleEditForm({{ comment.id }})">Cancel</button>
-                        </div>
-                    </form>
                     {% endif %}
-                </li>
+                </div>
+                {% if comment.is_deleted %}
+                <div class="comment-content" id="comment-content-{{ comment.id }}">
+                    {% if comment.deleted_by == 'admin' %}
+                    [This comment has been removed by a moderator]
+                    {% else %}
+                    [This comment has been deleted by the author]
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="comment-content" id="comment-content-{{ comment.id }}">{{ comment.content | urlize }}</div>
+                {% if current_user.is_authenticated and comment.author_username == current_user.username %}
+                <form class="edit-form" id="edit-form-{{ comment.id }}" method="post" action="{{ url_for('videos.edit_comment', v=video.short_id) }}">
+                    <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                    <textarea name="content" maxlength="5000">{{ comment.content }}</textarea>
+                    <div class="edit-form-actions">
+                        <button type="submit" class="btn-save">Save</button>
+                        <button type="button" class="btn-cancel" onclick="toggleEditForm({{ comment.id }})">Cancel</button>
+                    </div>
+                </form>
+                {% endif %}
+                {% endif %}
+
+                {# Reply button - available for all comments (deleted or not) #}
+                {% if current_user.is_authenticated %}
+                <button type="button" class="btn-reply" onclick="toggleReplyForm({{ comment.id }})">Reply</button>
+                <form class="reply-form" id="reply-form-{{ comment.id }}" method="post" action="{{ url_for('videos.post_comment', v=video.short_id) }}">
+                    <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                    <textarea name="content" placeholder="Write a reply..." maxlength="5000"></textarea>
+                    <div class="reply-form-actions">
+                        <button type="submit" class="btn-save">Reply</button>
+                        <button type="button" class="btn-cancel" onclick="toggleReplyForm({{ comment.id }})">Cancel</button>
+                    </div>
+                </form>
+                {% endif %}
+
+                {# Display nested replies recursively #}
+                {% if comment.replies %}
+                <button type="button" class="reply-toggle" onclick="toggleReplies({{ comment.id }})">
+                    <span id="reply-toggle-text-{{ comment.id }}">Show {{ comment.replies | length }} repl{{ 'ies' if comment.replies | length > 1 else 'y' }}</span>
+                </button>
+                <ul class="replies-list" id="replies-{{ comment.id }}" style="display: none;">
+                    {% for reply in comment.replies %}
+                    {{ render_comment(reply, is_reply=true) }}
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </li>
+            {% endmacro %}
+
+            {% set top_level_comments = video.comments | selectattr('parent_id', 'none') | list %}
+            {% if top_level_comments %}
+            <ul class="comment-list">
+                {% for comment in top_level_comments %}
+                {{ render_comment(comment) }}
                 {% endfor %}
             </ul>
             {% else %}
@@ -738,6 +861,25 @@
                 if (editForm && commentContent) {
                     editForm.classList.toggle('active');
                     commentContent.style.display = editForm.classList.contains('active') ? 'none' : 'block';
+                }
+            }
+
+            function toggleReplyForm(commentId) {
+                const replyForm = document.getElementById('reply-form-' + commentId);
+                if (replyForm) {
+                    replyForm.classList.toggle('active');
+                }
+            }
+
+            function toggleReplies(commentId) {
+                const repliesList = document.getElementById('replies-' + commentId);
+                const toggleText = document.getElementById('reply-toggle-text-' + commentId);
+                if (repliesList && toggleText) {
+                    const isHidden = repliesList.style.display === 'none';
+                    repliesList.style.display = isHidden ? 'block' : 'none';
+                    const replyCount = toggleText.textContent.match(/\d+/)[0];
+                    const replyWord = replyCount === '1' ? 'reply' : 'replies';
+                    toggleText.textContent = (isHidden ? 'Hide ' : 'Show ') + replyCount + ' ' + replyWord;
                 }
             }
 

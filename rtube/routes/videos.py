@@ -236,15 +236,24 @@ def post_comment():
         flash("Comment cannot be empty.", "error")
         return redirect(url_for('videos.watch_video', v=short_id))
 
+    # Handle reply to parent comment
+    parent_id = request.form.get('parent_id', type=int)
+    if parent_id:
+        parent_comment = Comment.query.get(parent_id)
+        if not parent_comment or parent_comment.video_id != video.id:
+            flash("Invalid parent comment.", "error")
+            return redirect(url_for('videos.watch_video', v=short_id))
+
     comment = Comment(
         video_id=video.id,
         author_username=current_user.username,
-        content=content
+        content=content,
+        parent_id=parent_id
     )
     db.session.add(comment)
     db.session.commit()
 
-    flash("Comment posted successfully.", "success")
+    flash("Reply posted successfully." if parent_id else "Comment posted successfully.", "success")
     return redirect(url_for('videos.watch_video', v=short_id))
 
 
@@ -285,7 +294,10 @@ def delete_comment():
         flash("You don't have permission to delete this comment.", "error")
         return redirect(url_for('videos.watch_video', v=short_id))
 
-    db.session.delete(comment)
+    # Soft delete: mark as deleted instead of removing
+    comment.is_deleted = True
+    # Track who deleted it: admin takes precedence if both owner and admin
+    comment.deleted_by = 'admin' if is_admin and not is_owner else 'owner'
     db.session.commit()
 
     flash("Comment deleted successfully.", "success")
