@@ -14,8 +14,8 @@ Streaming platform Proof Of Concept.
 Pull and run the official Docker image:
 
 ```bash
-docker pull yourusername/rtube:latest
-docker run -p 5000:5000 yourusername/rtube:latest
+docker pull richarddally/rtube:latest
+docker run -p 5000:5000 richarddally/rtube:latest
 ```
 
 Or use docker-compose:
@@ -23,7 +23,7 @@ Or use docker-compose:
 ```yaml
 services:
   rtube:
-    image: yourusername/rtube:latest
+    image: richarddally/rtube:latest
     ports:
       - "5000:5000"
     volumes:
