@@ -6,35 +6,110 @@ on:
       - 'v*'  # Triggered on version tags (e.g., v0.1.0, v1.0.0)
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version tag to create (e.g., v0.1.0)'
+      bump:
+        description: 'Version bump type'
         required: true
-        type: string
+        type: choice
+        options:
+          - PATCH
+          - MINOR
+          - MAJOR
 
 env:
   DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/rtube
 
 jobs:
+  bump-version:
+    name: Bump version
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+      version_num: ${{ steps.bump.outputs.version_num }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version
+        id: bump
+        run: |
+          # Read current version from __version__.py
+          CURRENT_VERSION=$(grep -oP '__version__ = "\K[^"]+' rtube/__version__.py)
+          echo "Current version: $CURRENT_VERSION"
+
+          # Parse version parts
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          # Bump based on input
+          case "${{ github.event.inputs.bump }}" in
+            MAJOR)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            MINOR)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            PATCH)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+
+          # Update __version__.py
+          sed -i "s/__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" rtube/__version__.py
+
+          # Update pyproject.toml
+          sed -i "s/^version = \".*\"/version = \"${NEW_VERSION}\"/" pyproject.toml
+
+          # Commit changes
+          git add rtube/__version__.py pyproject.toml
+          git commit -m "Bump version to ${NEW_VERSION}"
+
+          # Create and push tag
+          git tag "v${NEW_VERSION}"
+          git push origin main --tags
+
+          # Set outputs
+          echo "version=v${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "version_num=${NEW_VERSION}" >> $GITHUB_OUTPUT
+
   build-wheel:
     name: Build Python wheel
     runs-on: ubuntu-latest
+    needs: [bump-version]
+    if: always() && (needs.bump-version.result == 'success' || needs.bump-version.result == 'skipped')
     outputs:
       version: ${{ steps.get_version.outputs.version }}
       version_num: ${{ steps.get_version.outputs.version_num }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.bump-version.outputs.version || github.ref }}
+          fetch-depth: 0
 
-      - name: Get version from tag or input
+      - name: Get version from tag or bump job
         id: get_version
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.version }}"
+            VERSION="${{ needs.bump-version.outputs.version }}"
+            VERSION_NUM="${{ needs.bump-version.outputs.version_num }}"
           else
             VERSION="${GITHUB_REF#refs/tags/}"
+            VERSION_NUM="${VERSION#v}"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          # Remove 'v' prefix if present
-          VERSION_NUM=${VERSION#v}
           echo "version_num=$VERSION_NUM" >> $GITHUB_OUTPUT
 
       - name: Install uv
@@ -60,6 +135,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build-wheel.outputs.version || github.ref }}
 
       - name: Download wheel
         uses: actions/download-artifact@v4
@@ -107,6 +184,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build-wheel.outputs.version || github.ref }}
 
       - name: Download wheel
         uses: actions/download-artifact@v4
@@ -163,7 +242,7 @@ jobs:
 
   rollback-on-failure:
     name: Rollback on failure
-    needs: [build-wheel, build-docker, publish-to-pypi, push-docker, create-github-release]
+    needs: [bump-version, build-wheel, build-docker, publish-to-pypi, push-docker, create-github-release]
     runs-on: ubuntu-latest
     if: failure()
     permissions:
@@ -182,6 +261,7 @@ jobs:
       - name: Log failure
         run: |
           echo "::error::Pipeline failed. Manual intervention may be required."
+          echo "Bump version result: ${{ needs.bump-version.result }}"
           echo "Wheel build result: ${{ needs.build-wheel.result }}"
           echo "Docker build result: ${{ needs.build-docker.result }}"
           echo "PyPI publish result: ${{ needs.publish-to-pypi.result }}"
@@ -192,3 +272,4 @@ jobs:
           echo "1. Manually creating the GitHub release"
           echo "2. Or yanking the PyPI release if needed"
           echo "3. Or removing the Docker image tag if needed"
+          echo "4. Or reverting the version bump commit if needed"

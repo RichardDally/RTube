@@ -473,23 +473,39 @@ No API tokens or secrets are required for PyPI - authentication is handled autom
 
 ### Triggering a Release
 
-The workflow is triggered automatically when you push a version tag:
+**Option 1: Manual trigger with semantic version bump (recommended)**
+
+1. Go to **Actions** > **Build and Publish**
+2. Click **Run workflow**
+3. Select the bump type:
+   - `PATCH` (0.2.0 → 0.2.1) - Bug fixes
+   - `MINOR` (0.2.0 → 0.3.0) - New features
+   - `MAJOR` (0.2.0 → 1.0.0) - Breaking changes
+4. Click **Run workflow**
+
+The workflow will automatically:
+- Read the current version from `rtube/__version__.py`
+- Bump the version based on your selection
+- Update both `rtube/__version__.py` and `pyproject.toml`
+- Commit the changes and create a git tag (e.g., `v0.3.0`)
+- Build and publish to PyPI and Docker Hub
+
+**Option 2: Push a version tag manually**
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
-
-Or manually via the Actions tab using "workflow_dispatch".
 
 ### Workflow Steps
 
-1. **Build Wheel**: Creates wheel and sdist using `uv build`
-2. **Build Docker**: Builds Docker image using the wheel (validates image builds correctly)
-3. **Publish to PyPI**: Uploads packages using OIDC trusted publishing (only after Docker build succeeds)
-4. **Push Docker**: Pushes Docker image to Docker Hub (only after Docker build succeeds)
-5. **Create GitHub Release**: Creates a release with the built artifacts (only after PyPI and Docker Hub publish succeed)
-6. **Rollback on failure**: Logs errors and provides guidance if any step fails
+1. **Bump Version** (manual trigger only): Updates version in source files, commits, and creates tag
+2. **Build Wheel**: Creates wheel and sdist using `uv build`
+3. **Build Docker**: Builds Docker image using the wheel (validates image builds correctly)
+4. **Publish to PyPI**: Uploads packages using OIDC trusted publishing (only after Docker build succeeds)
+5. **Push Docker**: Pushes Docker image to Docker Hub (only after Docker build succeeds)
+6. **Create GitHub Release**: Creates a release with the built artifacts (only after PyPI and Docker Hub publish succeed)
+7. **Rollback on failure**: Logs errors and provides guidance if any step fails
 
 ### Git LFS side note
 * Download and install [Git Large File Storage](https://git-lfs.github.com/)
