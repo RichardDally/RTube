@@ -8,13 +8,88 @@ var player = videojs("RPlayer", {
     plugins: {
         hotkeys: {
             enableModifiersForNumbers: false,
-            seekStep: 10
+            seekStep: 10,
+            customKeys: {
+                theaterMode: {
+                    key: function(event) {
+                        return event.which === 84; // 't' key
+                    },
+                    handler: function(player, options, event) {
+                        toggleTheaterMode();
+                    }
+                }
+            }
         }
     }
 });
 
 player.test();
 player.hlsQualitySelector({ displayCurrentQuality: true });
+
+// Theater mode functionality
+function toggleTheaterMode() {
+    var body = document.body;
+    var isTheater = body.classList.toggle('theater-mode');
+
+    // Update button state
+    var btn = document.querySelector('.vjs-theater-button');
+    if (btn) {
+        btn.classList.toggle('vjs-theater-active', isTheater);
+        btn.setAttribute('title', isTheater ? 'Exit Theater Mode (t)' : 'Theater Mode (t)');
+    }
+
+    // Save preference to localStorage
+    localStorage.setItem('rtube-theater-mode', isTheater ? 'true' : 'false');
+
+    // Trigger video.js resize to adjust to new dimensions
+    setTimeout(function() {
+        player.trigger('resize');
+    }, 100);
+}
+
+// Initialize theater mode from saved preference
+function initTheaterMode() {
+    var savedPreference = localStorage.getItem('rtube-theater-mode');
+    if (savedPreference === 'true') {
+        document.body.classList.add('theater-mode');
+        var btn = document.querySelector('.vjs-theater-button');
+        if (btn) {
+            btn.classList.add('vjs-theater-active');
+            btn.setAttribute('title', 'Exit Theater Mode (t)');
+        }
+    }
+}
+
+// Create Theater Mode Button component
+var Button = videojs.getComponent('Button');
+var TheaterButton = videojs.extend(Button, {
+    constructor: function(player, options) {
+        Button.call(this, player, options);
+        this.controlText('Theater Mode (t)');
+        this.addClass('vjs-theater-button');
+
+        // Set initial state based on saved preference
+        if (localStorage.getItem('rtube-theater-mode') === 'true') {
+            this.addClass('vjs-theater-active');
+            this.controlText('Exit Theater Mode (t)');
+        }
+    },
+    handleClick: function() {
+        toggleTheaterMode();
+    },
+    buildCSSClass: function() {
+        return 'vjs-theater-button ' + Button.prototype.buildCSSClass.call(this);
+    }
+});
+
+// Register the component
+videojs.registerComponent('TheaterButton', TheaterButton);
+
+// Add the button to the control bar
+player.ready(function() {
+    player.getChild('controlBar').addChild('TheaterButton', {}, 11);
+    initTheaterMode();
+});
 
 // Watch history tracking
 var watchHistoryEnabled = typeof videoShortId !== 'undefined' && videoShortId;
