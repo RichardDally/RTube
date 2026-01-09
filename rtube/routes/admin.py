@@ -1,11 +1,12 @@
 import logging
 import re
+from datetime import datetime, timedelta
 from pathlib import Path
 from flask import Blueprint, render_template, abort, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
-from rtube.models import db, Video, VideoVisibility, Comment, Playlist, Favorite
+from rtube.models import db, Video, VideoVisibility, Comment, Playlist, Favorite, EncodingJob, WatchHistory
 from rtube.models_auth import User, UserRole
 from rtube.services.encoder import encoder_service
 
@@ -327,3 +328,218 @@ def regenerate_previews_submit():
         flash('No previews were generated', 'warning')
 
     return redirect(url_for('admin.regenerate_previews'))
+
+
+def _get_folder_size(folder_path: Path) -> int:
+    """Calculate total size of all files in a folder (in bytes)."""
+    total_size = 0
+    if folder_path.exists():
+        for item in folder_path.rglob('*'):
+            if item.is_file():
+                total_size += item.stat().st_size
+    return total_size
+
+
+def _format_size(size_bytes: int) -> str:
+    """Format bytes to human readable string."""
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if size_bytes < 1024:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024
+    return f"{size_bytes:.1f} PB"
+
+
+@admin_bp.route('/analytics')
+@login_required
+@admin_required
+def analytics():
+    """Display analytics dashboard with platform statistics."""
+    now = datetime.utcnow()
+    today = now.date()
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+
+    # === Overview Stats ===
+    total_videos = Video.query.count()
+    total_users = User.query.count()
+    total_comments = Comment.query.filter_by(is_deleted=False).count()
+    total_views = db.session.query(func.sum(Video.view_count)).scalar() or 0
+
+    # Videos by visibility
+    public_videos = Video.query.filter_by(visibility='public').count()
+    private_videos = Video.query.filter_by(visibility='private').count()
+
+    # === Storage Stats ===
+    videos_folder = Path(current_app.config.get('VIDEOS_FOLDER', ''))
+    thumbnails_folder = Path(current_app.config.get('THUMBNAILS_FOLDER', ''))
+
+    videos_size = _get_folder_size(videos_folder)
+    thumbnails_size = _get_folder_size(thumbnails_folder)
+    total_storage = videos_size + thumbnails_size
+
+    # Count files
+    video_files_count = len(list(videos_folder.glob('*.m3u8'))) if videos_folder.exists() else 0
+    ts_files_count = len(list(videos_folder.glob('*.ts'))) if videos_folder.exists() else 0
+    thumbnail_files_count = len(list(thumbnails_folder.glob('*'))) if thumbnails_folder.exists() else 0
+
+    storage_stats = {
+        'videos_size': _format_size(videos_size),
+        'thumbnails_size': _format_size(thumbnails_size),
+        'total_size': _format_size(total_storage),
+        'video_files': video_files_count,
+        'ts_segments': ts_files_count,
+        'thumbnails': thumbnail_files_count,
+    }
+
+    # === Top Videos (by views) ===
+    top_videos = Video.query.order_by(Video.view_count.desc()).limit(10).all()
+
+    # === Recent Activity ===
+    recent_videos = Video.query.order_by(Video.created_at.desc()).limit(5).all()
+    recent_comments = Comment.query.filter_by(is_deleted=False).order_by(Comment.created_at.desc()).limit(5).all()
+    recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
+
+    # === Encoding Stats ===
+    encoding_stats = {
+        'total': EncodingJob.query.count(),
+        'completed': EncodingJob.query.filter_by(status='completed').count(),
+        'failed': EncodingJob.query.filter_by(status='failed').count(),
+        'pending': EncodingJob.query.filter_by(status='pending').count(),
+        'encoding': EncodingJob.query.filter_by(status='encoding').count(),
+    }
+
+    # === Activity Over Time (last 30 days) ===
+    # Videos uploaded per day
+    videos_by_day = db.session.query(
+        func.date(Video.created_at).label('date'),
+        func.count(Video.id).label('count')
+    ).filter(
+        Video.created_at >= month_ago
+    ).group_by(
+        func.date(Video.created_at)
+    ).order_by('date').all()
+
+    # Comments per day
+    comments_by_day = db.session.query(
+        func.date(Comment.created_at).label('date'),
+        func.count(Comment.id).label('count')
+    ).filter(
+        Comment.created_at >= month_ago,
+        Comment.is_deleted == False
+    ).group_by(
+        func.date(Comment.created_at)
+    ).order_by('date').all()
+
+    # Users registered per day
+    users_by_day = db.session.query(
+        func.date(User.created_at).label('date'),
+        func.count(User.id).label('count')
+    ).filter(
+        User.created_at >= month_ago
+    ).group_by(
+        func.date(User.created_at)
+    ).order_by('date').all()
+
+    # Build chart data (fill in missing days with 0)
+    chart_labels = []
+    chart_videos = []
+    chart_comments = []
+    chart_users = []
+
+    videos_dict = {str(row.date): row.count for row in videos_by_day}
+    comments_dict = {str(row.date): row.count for row in comments_by_day}
+    users_dict = {str(row.date): row.count for row in users_by_day}
+
+    for i in range(30, -1, -1):
+        day = today - timedelta(days=i)
+        day_str = str(day)
+        chart_labels.append(day.strftime('%b %d'))
+        chart_videos.append(videos_dict.get(day_str, 0))
+        chart_comments.append(comments_dict.get(day_str, 0))
+        chart_users.append(users_dict.get(day_str, 0))
+
+    # === User Stats ===
+    # Top uploaders
+    top_uploaders = db.session.query(
+        Video.owner_username,
+        func.count(Video.id).label('video_count'),
+        func.sum(Video.view_count).label('total_views')
+    ).filter(
+        Video.owner_username != None
+    ).group_by(
+        Video.owner_username
+    ).order_by(
+        func.count(Video.id).desc()
+    ).limit(10).all()
+
+    # Top commenters
+    top_commenters = db.session.query(
+        Comment.author_username,
+        func.count(Comment.id).label('comment_count')
+    ).filter(
+        Comment.is_deleted == False
+    ).group_by(
+        Comment.author_username
+    ).order_by(
+        func.count(Comment.id).desc()
+    ).limit(10).all()
+
+    # Users by role
+    users_by_role = db.session.query(
+        User.role,
+        func.count(User.id).label('count')
+    ).group_by(User.role).all()
+
+    role_stats = {row.role: row.count for row in users_by_role}
+
+    # === Week-over-week comparisons ===
+    videos_this_week = Video.query.filter(Video.created_at >= week_ago).count()
+    videos_last_week = Video.query.filter(
+        Video.created_at >= week_ago - timedelta(days=7),
+        Video.created_at < week_ago
+    ).count()
+
+    comments_this_week = Comment.query.filter(
+        Comment.created_at >= week_ago,
+        Comment.is_deleted == False
+    ).count()
+    comments_last_week = Comment.query.filter(
+        Comment.created_at >= week_ago - timedelta(days=7),
+        Comment.created_at < week_ago,
+        Comment.is_deleted == False
+    ).count()
+
+    users_this_week = User.query.filter(User.created_at >= week_ago).count()
+    users_last_week = User.query.filter(
+        User.created_at >= week_ago - timedelta(days=7),
+        User.created_at < week_ago
+    ).count()
+
+    weekly_comparison = {
+        'videos': {'current': videos_this_week, 'previous': videos_last_week},
+        'comments': {'current': comments_this_week, 'previous': comments_last_week},
+        'users': {'current': users_this_week, 'previous': users_last_week},
+    }
+
+    return render_template('admin/analytics.html',
+        total_videos=total_videos,
+        total_users=total_users,
+        total_comments=total_comments,
+        total_views=total_views,
+        public_videos=public_videos,
+        private_videos=private_videos,
+        storage_stats=storage_stats,
+        top_videos=top_videos,
+        recent_videos=recent_videos,
+        recent_comments=recent_comments,
+        recent_users=recent_users,
+        encoding_stats=encoding_stats,
+        chart_labels=chart_labels,
+        chart_videos=chart_videos,
+        chart_comments=chart_comments,
+        chart_users=chart_users,
+        top_uploaders=top_uploaders,
+        top_commenters=top_commenters,
+        role_stats=role_stats,
+        weekly_comparison=weekly_comparison,
+    )

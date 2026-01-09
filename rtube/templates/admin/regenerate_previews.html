@@ -34,6 +34,27 @@
             .back-link:hover {
                 color: #fff;
             }
+            .admin-nav {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+            }
+            .admin-nav a {
+                padding: 10px 16px;
+                background-color: #2a2a2a;
+                color: #fff;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size: 13px;
+                transition: background-color 0.2s;
+            }
+            .admin-nav a:hover {
+                background-color: #3a3a3a;
+            }
+            .admin-nav a.active {
+                background-color: #1565C0;
+            }
             .video-count {
                 color: #888;
                 font-size: 14px;
@@ -192,11 +213,18 @@
     <body>
         <div class="header">
             <div class="header-left">
-                <a href="{{ url_for('admin.users') }}" class="back-link">&larr; Back to Users</a>
+                <a href="/" class="back-link">&larr; Back to RTube</a>
                 <h1>Regenerate Previews</h1>
             </div>
             <span class="video-count">{{ videos | length }} video{{ 's' if videos | length != 1 else '' }} missing preview{{ 's' if videos | length != 1 else '' }}</span>
         </div>
+
+        <nav class="admin-nav">
+            <a href="{{ url_for('admin.analytics') }}">Analytics</a>
+            <a href="{{ url_for('admin.users') }}">Users</a>
+            <a href="{{ url_for('admin.import_videos') }}">Import Videos</a>
+            <a href="{{ url_for('admin.regenerate_previews') }}" class="active">Regenerate Previews</a>
+        </nav>
 
         <p class="description">
             This page lists videos that don't have a preview clip for hover display.

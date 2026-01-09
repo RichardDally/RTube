@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>RTube - Admin - Analytics</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #1a1a1a;
+                color: #fff;
+            }
+            h1 {
+                margin-bottom: 10px;
+            }
+            h2 {
+                font-size: 16px;
+                color: #888;
+                margin: 0 0 15px 0;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 30px;
+            }
+            .header-left {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+            }
+            .back-link {
+                color: #888;
+                text-decoration: none;
+                font-size: 14px;
+            }
+            .back-link:hover {
+                color: #fff;
+            }
+            .admin-nav {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+            }
+            .admin-nav a {
+                padding: 10px 16px;
+                background-color: #2a2a2a;
+                color: #fff;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size: 13px;
+                transition: background-color 0.2s;
+            }
+            .admin-nav a:hover {
+                background-color: #3a3a3a;
+            }
+            .admin-nav a.active {
+                background-color: #1565C0;
+            }
+
+            /* Stats Cards */
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+            .stat-card {
+                background-color: #2a2a2a;
+                border-radius: 8px;
+                padding: 20px;
+            }
+            .stat-card .label {
+                color: #888;
+                font-size: 13px;
+                margin-bottom: 8px;
+            }
+            .stat-card .value {
+                font-size: 28px;
+                font-weight: 600;
+                color: #fff;
+            }
+            .stat-card .subvalue {
+                font-size: 13px;
+                color: #888;
+                margin-top: 5px;
+            }
+            .stat-card.highlight {
+                background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%);
+            }
+            .stat-card.highlight .label {
+                color: rgba(255,255,255,0.8);
+            }
+            .stat-card .trend {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-size: 12px;
+                margin-left: 8px;
+            }
+            .stat-card .trend.up {
+                background-color: rgba(76, 175, 80, 0.2);
+                color: #81C784;
+            }
+            .stat-card .trend.down {
+                background-color: rgba(244, 67, 54, 0.2);
+                color: #E57373;
+            }
+            .stat-card .trend.neutral {
+                background-color: rgba(158, 158, 158, 0.2);
+                color: #9E9E9E;
+            }
+
+            /* Dashboard Grid */
+            .dashboard-grid {
+                display: grid;
+                grid-template-columns: 2fr 1fr;
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+            @media (max-width: 1000px) {
+                .dashboard-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* Panels */
+            .panel {
+                background-color: #2a2a2a;
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+            .panel-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+            }
+            .panel h2 {
+                margin: 0;
+            }
+
+            /* Chart Container */
+            .chart-container {
+                position: relative;
+                height: 300px;
+            }
+
+            /* Tables */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            th, td {
+                padding: 10px;
+                text-align: left;
+                border-bottom: 1px solid #333;
+            }
+            th {
+                color: #888;
+                font-size: 12px;
+                text-transform: uppercase;
+                font-weight: 600;
+            }
+            tr:last-child td {
+                border-bottom: none;
+            }
+            tr:hover {
+                background-color: #333;
+            }
+            .video-title-cell {
+                max-width: 250px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .video-title-cell a {
+                color: #fff;
+                text-decoration: none;
+            }
+            .video-title-cell a:hover {
+                text-decoration: underline;
+            }
+
+            /* Storage Bar */
+            .storage-bar {
+                height: 20px;
+                background-color: #333;
+                border-radius: 10px;
+                overflow: hidden;
+                margin: 10px 0;
+            }
+            .storage-bar .fill {
+                height: 100%;
+                background: linear-gradient(90deg, #1565C0, #42A5F5);
+                border-radius: 10px;
+            }
+            .storage-details {
+                display: flex;
+                justify-content: space-between;
+                font-size: 13px;
+                color: #888;
+            }
+
+            /* Encoding Stats */
+            .encoding-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 10px;
+                text-align: center;
+            }
+            .encoding-stat {
+                padding: 10px;
+                background-color: #333;
+                border-radius: 5px;
+            }
+            .encoding-stat .count {
+                font-size: 20px;
+                font-weight: 600;
+            }
+            .encoding-stat .label {
+                font-size: 11px;
+                color: #888;
+                text-transform: uppercase;
+            }
+            .encoding-stat.completed .count { color: #81C784; }
+            .encoding-stat.failed .count { color: #E57373; }
+            .encoding-stat.pending .count { color: #FFB74D; }
+            .encoding-stat.encoding .count { color: #64B5F6; }
+
+            /* Role Pills */
+            .role-grid {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            .role-pill {
+                padding: 8px 16px;
+                background-color: #333;
+                border-radius: 20px;
+                font-size: 13px;
+            }
+            .role-pill .count {
+                font-weight: 600;
+                margin-left: 5px;
+            }
+
+            /* Recent Items */
+            .recent-item {
+                padding: 10px 0;
+                border-bottom: 1px solid #333;
+            }
+            .recent-item:last-child {
+                border-bottom: none;
+            }
+            .recent-item .title {
+                font-weight: 500;
+                margin-bottom: 3px;
+            }
+            .recent-item .meta {
+                font-size: 12px;
+                color: #888;
+            }
+            .recent-item a {
+                color: #fff;
+                text-decoration: none;
+            }
+            .recent-item a:hover {
+                text-decoration: underline;
+            }
+
+            /* Two Column Layout */
+            .two-columns {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+            @media (max-width: 800px) {
+                .two-columns {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            footer {
+                margin-top: 50px;
+                padding-top: 20px;
+                border-top: 1px solid #333;
+                text-align: center;
+                color: #666;
+                font-size: 12px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="header-left">
+                <a href="/" class="back-link">&larr; Back to RTube</a>
+                <h1>Analytics Dashboard</h1>
+            </div>
+        </div>
+
+        <nav class="admin-nav">
+            <a href="{{ url_for('admin.analytics') }}" class="active">Analytics</a>
+            <a href="{{ url_for('admin.users') }}">Users</a>
+            <a href="{{ url_for('admin.import_videos') }}">Import Videos</a>
+            <a href="{{ url_for('admin.regenerate_previews') }}">Regenerate Previews</a>
+        </nav>
+
+        <!-- Overview Stats -->
+        <div class="stats-grid">
+            <div class="stat-card highlight">
+                <div class="label">Total Views</div>
+                <div class="value">{{ "{:,}".format(total_views) }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Videos</div>
+                <div class="value">
+                    {{ total_videos }}
+                    {% set v = weekly_comparison.videos %}
+                    {% if v.current > v.previous %}
+                    <span class="trend up">+{{ v.current - v.previous }} this week</span>
+                    {% elif v.current < v.previous %}
+                    <span class="trend down">{{ v.current - v.previous }} this week</span>
+                    {% else %}
+                    <span class="trend neutral">No change</span>
+                    {% endif %}
+                </div>
+                <div class="subvalue">{{ public_videos }} public, {{ private_videos }} private</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Users</div>
+                <div class="value">
+                    {{ total_users }}
+                    {% set u = weekly_comparison.users %}
+                    {% if u.current > u.previous %}
+                    <span class="trend up">+{{ u.current - u.previous }} this week</span>
+                    {% elif u.current < u.previous %}
+                    <span class="trend down">{{ u.current - u.previous }} this week</span>
+                    {% else %}
+                    <span class="trend neutral">No change</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Comments</div>
+                <div class="value">
+                    {{ total_comments }}
+                    {% set c = weekly_comparison.comments %}
+                    {% if c.current > c.previous %}
+                    <span class="trend up">+{{ c.current - c.previous }} this week</span>
+                    {% elif c.current < c.previous %}
+                    <span class="trend down">{{ c.current - c.previous }} this week</span>
+                    {% else %}
+                    <span class="trend neutral">No change</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Activity Chart -->
+            <div class="panel">
+                <h2>Activity (Last 30 Days)</h2>
+                <div class="chart-container">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Storage Stats -->
+            <div>
+                <div class="panel">
+                    <h2>Storage Usage</h2>
+                    <div class="stat-card" style="background: transparent; padding: 0;">
+                        <div class="value">{{ storage_stats.total_size }}</div>
+                        <div class="subvalue">Total storage used</div>
+                    </div>
+                    <div class="storage-details" style="margin-top: 15px;">
+                        <span>Videos: {{ storage_stats.videos_size }}</span>
+                        <span>Thumbnails: {{ storage_stats.thumbnails_size }}</span>
+                    </div>
+                    <table style="margin-top: 15px;">
+                        <tr>
+                            <td>Video files (.m3u8)</td>
+                            <td style="text-align: right;">{{ storage_stats.video_files }}</td>
+                        </tr>
+                        <tr>
+                            <td>Segments (.ts)</td>
+                            <td style="text-align: right;">{{ storage_stats.ts_segments }}</td>
+                        </tr>
+                        <tr>
+                            <td>Thumbnails & Previews</td>
+                            <td style="text-align: right;">{{ storage_stats.thumbnails }}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Encoding Stats -->
+                <div class="panel">
+                    <h2>Encoding Jobs</h2>
+                    <div class="encoding-grid">
+                        <div class="encoding-stat completed">
+                            <div class="count">{{ encoding_stats.completed }}</div>
+                            <div class="label">Completed</div>
+                        </div>
+                        <div class="encoding-stat failed">
+                            <div class="count">{{ encoding_stats.failed }}</div>
+                            <div class="label">Failed</div>
+                        </div>
+                        <div class="encoding-stat pending">
+                            <div class="count">{{ encoding_stats.pending }}</div>
+                            <div class="label">Pending</div>
+                        </div>
+                        <div class="encoding-stat encoding">
+                            <div class="count">{{ encoding_stats.encoding }}</div>
+                            <div class="label">In Progress</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="two-columns">
+            <!-- Top Videos -->
+            <div class="panel">
+                <h2>Top Videos by Views</h2>
+                {% if top_videos %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th style="text-align: right;">Views</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for video in top_videos %}
+                        <tr>
+                            <td class="video-title-cell">
+                                <a href="/watch?v={{ video.short_id }}">{{ video.title or video.filename }}</a>
+                            </td>
+                            <td style="text-align: right;">{{ "{:,}".format(video.view_count) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p style="color: #888; font-style: italic;">No videos yet.</p>
+                {% endif %}
+            </div>
+
+            <!-- Top Uploaders -->
+            <div class="panel">
+                <h2>Top Uploaders</h2>
+                {% if top_uploaders %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th style="text-align: right;">Videos</th>
+                            <th style="text-align: right;">Total Views</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for uploader in top_uploaders %}
+                        <tr>
+                            <td>{{ uploader.owner_username }}</td>
+                            <td style="text-align: right;">{{ uploader.video_count }}</td>
+                            <td style="text-align: right;">{{ "{:,}".format(uploader.total_views or 0) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p style="color: #888; font-style: italic;">No uploaders yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="two-columns">
+            <!-- Recent Videos -->
+            <div class="panel">
+                <h2>Recent Videos</h2>
+                {% if recent_videos %}
+                {% for video in recent_videos %}
+                <div class="recent-item">
+                    <div class="title"><a href="/watch?v={{ video.short_id }}">{{ video.title or video.filename }}</a></div>
+                    <div class="meta">
+                        by {{ video.owner_username or 'Unknown' }} &bull;
+                        {{ video.created_at.strftime('%b %d, %Y at %H:%M') }} &bull;
+                        {{ video.view_count }} views
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p style="color: #888; font-style: italic;">No recent videos.</p>
+                {% endif %}
+            </div>
+
+            <!-- Recent Comments -->
+            <div class="panel">
+                <h2>Recent Comments</h2>
+                {% if recent_comments %}
+                {% for comment in recent_comments %}
+                <div class="recent-item">
+                    <div class="title">{{ comment.author_username }}</div>
+                    <div class="meta">
+                        {{ comment.content[:100] }}{% if comment.content|length > 100 %}...{% endif %}
+                        <br>
+                        {{ comment.created_at.strftime('%b %d, %Y at %H:%M') }}
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p style="color: #888; font-style: italic;">No recent comments.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="two-columns">
+            <!-- Top Commenters -->
+            <div class="panel">
+                <h2>Top Commenters</h2>
+                {% if top_commenters %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th style="text-align: right;">Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for commenter in top_commenters %}
+                        <tr>
+                            <td>{{ commenter.author_username }}</td>
+                            <td style="text-align: right;">{{ commenter.comment_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p style="color: #888; font-style: italic;">No commenters yet.</p>
+                {% endif %}
+            </div>
+
+            <!-- Users by Role -->
+            <div class="panel">
+                <h2>Users by Role</h2>
+                <div class="role-grid">
+                    <div class="role-pill">
+                        Admin <span class="count">{{ role_stats.get('admin', 0) }}</span>
+                    </div>
+                    <div class="role-pill">
+                        Uploader <span class="count">{{ role_stats.get('uploader', 0) }}</span>
+                    </div>
+                    <div class="role-pill">
+                        Viewer <span class="count">{{ role_stats.get('viewer', 0) }}</span>
+                    </div>
+                </div>
+
+                <h2 style="margin-top: 25px;">Recent Users</h2>
+                {% if recent_users %}
+                {% for user in recent_users %}
+                <div class="recent-item">
+                    <div class="title">{{ user.username }}</div>
+                    <div class="meta">
+                        {{ user.role }} &bull;
+                        Joined {{ user.created_at.strftime('%b %d, %Y') }}
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p style="color: #888; font-style: italic;">No users yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <footer>RTube v{{ rtube_version }}</footer>
+
+        <script>
+            // Activity Chart
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: {{ chart_labels | tojson }},
+                    datasets: [
+                        {
+                            label: 'Videos',
+                            data: {{ chart_videos | tojson }},
+                            borderColor: '#42A5F5',
+                            backgroundColor: 'rgba(66, 165, 245, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                        },
+                        {
+                            label: 'Comments',
+                            data: {{ chart_comments | tojson }},
+                            borderColor: '#81C784',
+                            backgroundColor: 'rgba(129, 199, 132, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                        },
+                        {
+                            label: 'Users',
+                            data: {{ chart_users | tojson }},
+                            borderColor: '#FFB74D',
+                            backgroundColor: 'rgba(255, 183, 77, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#888',
+                                usePointStyle: true,
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#888',
+                                maxRotation: 45,
+                                minRotation: 45,
+                            },
+                            grid: {
+                                color: '#333',
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#888',
+                                precision: 0,
+                            },
+                            grid: {
+                                color: '#333',
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index',
+                    }
+                }
+            });
+        </script>
+    </body>
+</html>
