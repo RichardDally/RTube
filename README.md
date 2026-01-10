@@ -82,11 +82,18 @@ Then open http://127.0.0.1:5000 in your browser.
 - Video visibility (public/private)
 - Video deletion by owner or admin
 - Thumbnail generation
+- Video preview on hover (WebM clips)
 - View count tracking
+- Recommended videos sidebar
+- Watch history with resume playback
 
 ### Comments
 
 - Post, edit, and delete comments on videos
+- Threaded replies (nested comments)
+- Soft delete with "[deleted]" placeholder
+- Sort by newest or oldest
+- YouTube-style collapsible replies
 - Automatic URL detection and linking (urlize)
 - Character limit (5000 characters)
 
@@ -166,6 +173,29 @@ Administrators have access to the **Admin** dropdown menu which provides:
 - Display available quality variants for each video
 - Bulk import with automatic thumbnail generation
 - Videos are imported as private by default
+
+#### Video Management (`/admin/videos`)
+- List all videos with filters (visibility, owner, sort)
+- Bulk actions: delete, make public, make private
+- Quick access to video editing and viewing
+
+#### Regenerate Previews (`/admin/regenerate-previews`)
+- List videos missing preview clips
+- Bulk generate WebM previews for hover display
+
+#### Analytics Dashboard (`/admin/analytics`)
+- Platform statistics (videos, users, comments, views)
+- Activity chart with configurable periods (30 days to 5 years)
+- Storage usage breakdown
+- Top videos, uploaders, and commenters
+- Encoding job statistics
+- Week-over-week comparisons
+
+#### Audit Log (`/admin/audit-log`)
+- Track all admin actions with timestamps
+- Filter by action type or admin user
+- Records IP addresses and action details
+- Paginated view with full history
 
 #### Video Editing (`/watch/edit`)
 - Admins can edit any video (not just their own)
