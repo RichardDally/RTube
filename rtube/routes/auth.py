@@ -115,12 +115,14 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('videos.index'))
 
+    oidc_enabled = current_app.config.get("OIDC_ENABLED", False)
+
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
 
         if not username or not password:
-            return render_template('auth/login.html', error="Username and password are required")
+            return render_template('auth/login.html', error="Username and password are required", oidc_enabled=oidc_enabled)
 
         user = User.query.filter_by(username=username).first()
 
@@ -136,15 +138,21 @@ def login():
             return redirect(url_for('videos.index'))
 
         current_app.logger.warning(f"Failed login attempt for username '{username}'")
-        return render_template('auth/login.html', error="Invalid username or password")
+        return render_template('auth/login.html', error="Invalid username or password", oidc_enabled=oidc_enabled)
 
-    return render_template('auth/login.html')
+    return render_template('auth/login.html', oidc_enabled=oidc_enabled)
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('videos.index'))
+
+    # Disable registration when OIDC is enabled
+    oidc_enabled = current_app.config.get("OIDC_ENABLED", False)
+    if oidc_enabled:
+        flash("Registration is disabled. Please use SSO to sign in.", "error")
+        return redirect(url_for('auth.login'))
 
     if request.method == 'POST':
         username = request.form.get('username', '').strip()

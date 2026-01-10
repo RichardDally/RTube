@@ -187,9 +187,11 @@
                 <button type="submit">Login</button>
             </form>
 
+            {% if not oidc_enabled %}
             <div class="links">
                 <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Register</a></p>
             </div>
+            {% endif %}
 
             <a href="{{ url_for('videos.index') }}" class="back-link">&larr; Back to videos</a>
         </div>

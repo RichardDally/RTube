@@ -406,7 +406,7 @@
                 <a href="{{ url_for('auth.logout') }}" class="btn-logout">Logout</a>
                 {% else %}
                 <a href="{{ url_for('auth.login') }}" class="btn-login">Login</a>
-                <a href="{{ url_for('auth.register') }}">Register</a>
+                {% if not oidc_enabled %}<a href="{{ url_for('auth.register') }}">Register</a>{% endif %}
                 {% endif %}
             </div>
         </div>
