@@ -213,17 +213,39 @@
                 color: #888;
                 font-size: 12px;
             }
+            .days-remaining {
+                color: #4CAF50;
+                font-weight: 500;
+                cursor: help;
+                border-bottom: 1px dotted #4CAF50;
+            }
+            .days-remaining.warning {
+                color: #F57C00;
+                border-bottom-color: #F57C00;
+            }
+            .days-remaining.critical {
+                color: #c62828;
+                border-bottom-color: #c62828;
+            }
             .announcement-actions {
                 display: flex;
                 gap: 10px;
+                flex-wrap: wrap;
             }
-            .btn-toggle, .btn-delete {
+            .btn-toggle, .btn-delete, .btn-edit {
                 padding: 6px 12px;
                 border: none;
                 border-radius: 4px;
                 font-size: 12px;
                 cursor: pointer;
                 transition: background-color 0.2s;
+            }
+            .btn-edit {
+                background-color: #1565C0;
+                color: white;
+            }
+            .btn-edit:hover {
+                background-color: #1976D2;
             }
             .btn-toggle {
                 background-color: #F57C00;
@@ -276,6 +298,67 @@
             .empty-state h2 {
                 color: #666;
                 margin-bottom: 10px;
+            }
+
+            /* Edit modal */
+            .modal-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                z-index: 1000;
+                justify-content: center;
+                align-items: center;
+            }
+            .modal-overlay.active {
+                display: flex;
+            }
+            .modal {
+                background-color: #2a2a2a;
+                border-radius: 8px;
+                padding: 25px;
+                min-width: 350px;
+                max-width: 90%;
+            }
+            .modal h3 {
+                margin: 0 0 20px 0;
+                color: #fff;
+            }
+            .modal .form-group {
+                margin-bottom: 15px;
+            }
+            .modal-actions {
+                display: flex;
+                gap: 10px;
+                justify-content: flex-end;
+                margin-top: 20px;
+            }
+            .btn-cancel {
+                padding: 8px 16px;
+                background-color: #444;
+                color: #fff;
+                border: none;
+                border-radius: 4px;
+                font-size: 13px;
+                cursor: pointer;
+            }
+            .btn-cancel:hover {
+                background-color: #555;
+            }
+            .btn-save {
+                padding: 8px 16px;
+                background-color: #1565C0;
+                color: #fff;
+                border: none;
+                border-radius: 4px;
+                font-size: 13px;
+                cursor: pointer;
+            }
+            .btn-save:hover {
+                background-color: #1976D2;
             }
 
             footer {
@@ -354,11 +437,13 @@
                             <span class="announcement-info">
                                 {% set days = announcement.days_remaining() %}
                                 {% if days == 0 %}
-                                Expires today
+                                <span class="days-remaining critical" title="{{ announcement.expires_at.strftime('%d/%m/%Y %H:%M') }}">Expires today</span>
                                 {% elif days == 1 %}
-                                Expires in 1 day
+                                <span class="days-remaining critical" title="{{ announcement.expires_at.strftime('%d/%m/%Y %H:%M') }}">1 day left</span>
+                                {% elif days <= 3 %}
+                                <span class="days-remaining warning" title="{{ announcement.expires_at.strftime('%d/%m/%Y %H:%M') }}">{{ days }} days left</span>
                                 {% else %}
-                                Expires in {{ days }} days
+                                <span class="days-remaining" title="{{ announcement.expires_at.strftime('%d/%m/%Y %H:%M') }}">{{ days }} days left</span>
                                 {% endif %}
                             </span>
                             {% elif not announcement.expires_at %}
@@ -367,6 +452,7 @@
                         </div>
                     </div>
                     <div class="announcement-actions">
+                        <button type="button" class="btn-edit" onclick="openEditModal({{ announcement.id }}, {{ announcement.days_remaining() if announcement.expires_at else 'null' }})">Edit</button>
                         <form method="post" action="{{ url_for('admin.toggle_announcement', announcement_id=announcement.id) }}" style="display: inline;">
                             <button type="submit" class="btn-toggle {{ 'activate' if not announcement.is_active else '' }}">
                                 {{ 'Activate' if not announcement.is_active else 'Deactivate' }}
@@ -395,5 +481,55 @@
         {% endif %}
 
         <footer>RTube v{{ rtube_version }}</footer>
+
+        <!-- Edit Duration Modal -->
+        <div class="modal-overlay" id="edit-modal">
+            <div class="modal">
+                <h3>Edit Duration</h3>
+                <form method="post" id="edit-duration-form">
+                    <div class="form-group">
+                        <label for="edit-duration-days">Duration (days from now)</label>
+                        <input type="number" name="duration_days" id="edit-duration-days" min="0" placeholder="Leave empty or 0 for no expiration">
+                        <span class="form-hint">Enter 0 or leave empty to remove expiration</span>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            function openEditModal(announcementId, currentDays) {
+                var modal = document.getElementById('edit-modal');
+                var form = document.getElementById('edit-duration-form');
+                var input = document.getElementById('edit-duration-days');
+
+                form.action = '/admin/announcements/' + announcementId + '/edit-duration';
+                input.value = currentDays !== null ? currentDays : '';
+
+                modal.classList.add('active');
+                input.focus();
+            }
+
+            function closeEditModal() {
+                var modal = document.getElementById('edit-modal');
+                modal.classList.remove('active');
+            }
+
+            // Close modal on escape key or click outside
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeEditModal();
+                }
+            });
+
+            document.getElementById('edit-modal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeEditModal();
+                }
+            });
+        </script>
     </body>
 </html>

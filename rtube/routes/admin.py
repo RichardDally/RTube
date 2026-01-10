@@ -946,3 +946,48 @@ def delete_announcement(announcement_id):
 
     flash('Announcement deleted.', 'success')
     return redirect(url_for('admin.announcements'))
+
+
+@admin_bp.route('/announcements/<int:announcement_id>/edit-duration', methods=['POST'])
+@login_required
+@admin_required
+def edit_announcement_duration(announcement_id):
+    """Edit announcement duration."""
+    announcement = Announcement.query.get_or_404(announcement_id)
+    duration_days = request.form.get('duration_days', '').strip()
+
+    old_expires = announcement.expires_at.strftime('%d/%m/%Y %H:%M') if announcement.expires_at else 'No expiration'
+
+    if duration_days == '' or duration_days == '0':
+        # Remove expiration
+        announcement.expires_at = None
+        new_expires = 'No expiration'
+    else:
+        try:
+            days = int(duration_days)
+            if days > 0:
+                announcement.expires_at = datetime.utcnow() + timedelta(days=days)
+                new_expires = announcement.expires_at.strftime('%d/%m/%Y %H:%M')
+            else:
+                flash('Duration must be a positive number.', 'error')
+                return redirect(url_for('admin.announcements'))
+        except ValueError:
+            flash('Invalid duration. Please enter a valid number of days.', 'error')
+            return redirect(url_for('admin.announcements'))
+
+    db.session.commit()
+
+    logger.info(f"Admin '{current_user.username}' updated duration for announcement ID {announcement_id}")
+
+    # Audit log
+    AuditLog.log(
+        username=current_user.username,
+        action='announcement_edit',
+        target_type='announcement',
+        target_id=announcement_id,
+        details=f"Duration changed from '{old_expires}' to '{new_expires}'",
+        ip_address=get_client_ip()
+    )
+
+    flash('Announcement duration updated.', 'success')
+    return redirect(url_for('admin.announcements'))
