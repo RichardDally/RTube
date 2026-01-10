@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>RTube - Admin - Videos</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #1a1a1a;
+                color: #fff;
+            }
+            h1 {
+                margin-bottom: 10px;
+            }
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+            }
+            .header-left {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+            }
+            .back-link {
+                color: #888;
+                text-decoration: none;
+                font-size: 14px;
+            }
+            .back-link:hover {
+                color: #fff;
+            }
+            .video-count {
+                color: #888;
+                font-size: 14px;
+            }
+            .admin-nav {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+            }
+            .admin-nav a {
+                padding: 10px 16px;
+                background-color: #2a2a2a;
+                color: #fff;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size: 13px;
+                transition: background-color 0.2s;
+            }
+            .admin-nav a:hover {
+                background-color: #3a3a3a;
+            }
+            .admin-nav a.active {
+                background-color: #1565C0;
+            }
+
+            /* Filters */
+            .filters {
+                display: flex;
+                gap: 15px;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            .filter-group {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .filter-group label {
+                color: #888;
+                font-size: 13px;
+            }
+            .filter-group select {
+                padding: 8px 12px;
+                background-color: #2a2a2a;
+                color: #fff;
+                border: 1px solid #444;
+                border-radius: 4px;
+                font-size: 13px;
+                cursor: pointer;
+            }
+            .filter-group select:focus {
+                outline: none;
+                border-color: #1565C0;
+            }
+
+            /* Bulk actions bar */
+            .bulk-actions {
+                display: flex;
+                gap: 10px;
+                padding: 15px;
+                background-color: #2a2a2a;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            .bulk-actions .selected-count {
+                color: #888;
+                font-size: 14px;
+                margin-right: 10px;
+            }
+            .bulk-actions button {
+                padding: 8px 16px;
+                border: none;
+                border-radius: 4px;
+                font-size: 13px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .bulk-actions .btn-delete {
+                background-color: #c62828;
+                color: #fff;
+            }
+            .bulk-actions .btn-delete:hover {
+                background-color: #b71c1c;
+            }
+            .bulk-actions .btn-delete:disabled {
+                background-color: #555;
+                cursor: not-allowed;
+            }
+            .bulk-actions .btn-public {
+                background-color: #2E7D32;
+                color: #fff;
+            }
+            .bulk-actions .btn-public:hover {
+                background-color: #1B5E20;
+            }
+            .bulk-actions .btn-public:disabled {
+                background-color: #555;
+                cursor: not-allowed;
+            }
+            .bulk-actions .btn-private {
+                background-color: #F57C00;
+                color: #fff;
+            }
+            .bulk-actions .btn-private:hover {
+                background-color: #E65100;
+            }
+            .bulk-actions .btn-private:disabled {
+                background-color: #555;
+                cursor: not-allowed;
+            }
+
+            /* Flash messages */
+            .flash-message {
+                padding: 12px 16px;
+                border-radius: 5px;
+                margin-bottom: 20px;
+                font-size: 14px;
+            }
+            .flash-success {
+                background-color: #2E7D32;
+                color: white;
+            }
+            .flash-error {
+                background-color: #c62828;
+                color: white;
+            }
+            .flash-warning {
+                background-color: #F57C00;
+                color: white;
+            }
+
+            /* Table */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                background-color: #2a2a2a;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            th, td {
+                padding: 12px 15px;
+                text-align: left;
+                border-bottom: 1px solid #333;
+            }
+            th {
+                background-color: #333;
+                font-weight: 600;
+                color: #aaa;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            tr:last-child td {
+                border-bottom: none;
+            }
+            tr:hover {
+                background-color: #333;
+            }
+
+            /* Checkbox */
+            .checkbox-cell {
+                width: 40px;
+            }
+            input[type="checkbox"] {
+                width: 18px;
+                height: 18px;
+                cursor: pointer;
+                accent-color: #1565C0;
+            }
+
+            /* Thumbnail */
+            .thumbnail-cell {
+                width: 120px;
+            }
+            .video-thumb {
+                width: 100px;
+                height: 56px;
+                object-fit: cover;
+                border-radius: 4px;
+                background-color: #444;
+            }
+
+            /* Video info */
+            .video-title {
+                font-weight: 500;
+                color: #fff;
+                margin-bottom: 4px;
+            }
+            .video-title a {
+                color: #fff;
+                text-decoration: none;
+            }
+            .video-title a:hover {
+                color: #4CAF50;
+            }
+            .video-meta {
+                font-size: 12px;
+                color: #888;
+            }
+
+            /* Visibility badge */
+            .visibility-badge {
+                display: inline-block;
+                padding: 3px 8px;
+                border-radius: 3px;
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+            }
+            .visibility-public {
+                background-color: #2E7D32;
+                color: #fff;
+            }
+            .visibility-private {
+                background-color: #F57C00;
+                color: #fff;
+            }
+
+            /* Owner link */
+            .owner-link {
+                color: #4CAF50;
+                text-decoration: none;
+            }
+            .owner-link:hover {
+                text-decoration: underline;
+            }
+
+            /* Actions */
+            .action-links a {
+                color: #4CAF50;
+                text-decoration: none;
+                margin-right: 10px;
+                font-size: 13px;
+            }
+            .action-links a:hover {
+                text-decoration: underline;
+            }
+            .action-links a.delete-link {
+                color: #ef5350;
+            }
+
+            /* Empty state */
+            .empty-state {
+                text-align: center;
+                padding: 60px 20px;
+                color: #888;
+            }
+            .empty-state h2 {
+                color: #666;
+                margin-bottom: 10px;
+            }
+
+            footer {
+                margin-top: 50px;
+                padding-top: 20px;
+                border-top: 1px solid #333;
+                text-align: center;
+                color: #666;
+                font-size: 12px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="header-left">
+                <a href="/" class="back-link">&larr; Back to RTube</a>
+                <h1>Video Management</h1>
+                <span class="video-count">{{ videos | length }} video(s)</span>
+            </div>
+        </div>
+
+        <nav class="admin-nav">
+            <a href="{{ url_for('admin.analytics') }}">Analytics</a>
+            <a href="{{ url_for('admin.users') }}">Users</a>
+            <a href="{{ url_for('admin.videos') }}" class="active">Videos</a>
+            <a href="{{ url_for('admin.import_videos') }}">Import Videos</a>
+            <a href="{{ url_for('admin.regenerate_previews') }}">Regenerate Previews</a>
+        </nav>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form id="bulk-form" method="post" action="{{ url_for('admin.videos_bulk_action') }}">
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Visibility:</label>
+                    <select onchange="applyFilters()" id="filter-visibility">
+                        <option value="all" {{ 'selected' if current_visibility == 'all' }}>All</option>
+                        <option value="public" {{ 'selected' if current_visibility == 'public' }}>Public</option>
+                        <option value="private" {{ 'selected' if current_visibility == 'private' }}>Private</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Owner:</label>
+                    <select onchange="applyFilters()" id="filter-owner">
+                        <option value="">All owners</option>
+                        {% for owner in owners %}
+                        <option value="{{ owner }}" {{ 'selected' if current_owner == owner }}>{{ owner }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Sort by:</label>
+                    <select onchange="applyFilters()" id="filter-sort">
+                        <option value="newest" {{ 'selected' if current_sort == 'newest' }}>Newest first</option>
+                        <option value="oldest" {{ 'selected' if current_sort == 'oldest' }}>Oldest first</option>
+                        <option value="views" {{ 'selected' if current_sort == 'views' }}>Most views</option>
+                        <option value="title" {{ 'selected' if current_sort == 'title' }}>Title A-Z</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Bulk actions -->
+            <div class="bulk-actions">
+                <span class="selected-count"><span id="selected-count">0</span> selected</span>
+                <button type="submit" name="action" value="make_public" class="btn-public" disabled id="btn-public">Make Public</button>
+                <button type="submit" name="action" value="make_private" class="btn-private" disabled id="btn-private">Make Private</button>
+                <button type="submit" name="action" value="delete" class="btn-delete" disabled id="btn-delete"
+                        onclick="return confirm('Are you sure you want to delete the selected videos? This action cannot be undone.')">Delete Selected</button>
+            </div>
+
+            {% if videos %}
+            <table>
+                <thead>
+                    <tr>
+                        <th class="checkbox-cell">
+                            <input type="checkbox" id="select-all" onchange="toggleSelectAll()">
+                        </th>
+                        <th class="thumbnail-cell">Thumbnail</th>
+                        <th>Video</th>
+                        <th>Owner</th>
+                        <th>Visibility</th>
+                        <th>Views</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for video in videos %}
+                    <tr>
+                        <td class="checkbox-cell">
+                            <input type="checkbox" name="video_ids" value="{{ video.id }}" onchange="updateSelectedCount()">
+                        </td>
+                        <td class="thumbnail-cell">
+                            {% if video.thumbnail %}
+                            <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}"
+                                 alt="{{ video.title or video.filename }}" class="video-thumb">
+                            {% else %}
+                            <div class="video-thumb"></div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="video-title">
+                                <a href="/watch?v={{ video.short_id }}">{{ video.title or video.filename }}</a>
+                            </div>
+                            <div class="video-meta">{{ video.filename }} &bull; {{ video.short_id }}</div>
+                        </td>
+                        <td>
+                            {% if video.owner_username %}
+                            <a href="{{ url_for('auth.user_profile', username=video.owner_username) }}" class="owner-link">{{ video.owner_username }}</a>
+                            {% else %}
+                            <span style="color: #666;">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="visibility-badge visibility-{{ video.visibility }}">{{ video.visibility }}</span>
+                        </td>
+                        <td>{{ "{:,}".format(video.view_count) }}</td>
+                        <td>{{ video.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td class="action-links">
+                            <a href="{{ url_for('videos.edit_video', v=video.short_id) }}">Edit</a>
+                            <a href="/watch?v={{ video.short_id }}">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <h2>No videos found</h2>
+                <p>Try adjusting your filters or upload some videos.</p>
+            </div>
+            {% endif %}
+        </form>
+
+        <footer>RTube Admin Panel</footer>
+
+        <script>
+            function applyFilters() {
+                const visibility = document.getElementById('filter-visibility').value;
+                const owner = document.getElementById('filter-owner').value;
+                const sort = document.getElementById('filter-sort').value;
+
+                const url = new URL(window.location.href);
+                url.searchParams.set('visibility', visibility);
+                if (owner) {
+                    url.searchParams.set('owner', owner);
+                } else {
+                    url.searchParams.delete('owner');
+                }
+                url.searchParams.set('sort', sort);
+                window.location.href = url.toString();
+            }
+
+            function toggleSelectAll() {
+                const selectAll = document.getElementById('select-all');
+                const checkboxes = document.querySelectorAll('input[name="video_ids"]');
+                checkboxes.forEach(cb => cb.checked = selectAll.checked);
+                updateSelectedCount();
+            }
+
+            function updateSelectedCount() {
+                const checkboxes = document.querySelectorAll('input[name="video_ids"]:checked');
+                const count = checkboxes.length;
+                document.getElementById('selected-count').textContent = count;
+
+                // Enable/disable buttons
+                const hasSelection = count > 0;
+                document.getElementById('btn-delete').disabled = !hasSelection;
+                document.getElementById('btn-public').disabled = !hasSelection;
+                document.getElementById('btn-private').disabled = !hasSelection;
+
+                // Update select-all checkbox state
+                const allCheckboxes = document.querySelectorAll('input[name="video_ids"]');
+                const selectAll = document.getElementById('select-all');
+                if (allCheckboxes.length > 0) {
+                    selectAll.checked = count === allCheckboxes.length;
+                    selectAll.indeterminate = count > 0 && count < allCheckboxes.length;
+                }
+            }
+        </script>
+    </body>
+</html>

@@ -562,3 +562,136 @@ def analytics():
         weekly_comparison=weekly_comparison,
         current_period=period,
     )
+
+
+@admin_bp.route('/videos')
+@login_required
+@admin_required
+def videos():
+    """List all videos for bulk management."""
+    # Get filter parameters
+    visibility_filter = request.args.get('visibility', 'all')
+    owner_filter = request.args.get('owner', '')
+    sort_by = request.args.get('sort', 'newest')
+
+    # Base query
+    query = Video.query
+
+    # Apply filters
+    if visibility_filter == 'public':
+        query = query.filter(Video.visibility == VideoVisibility.PUBLIC.value)
+    elif visibility_filter == 'private':
+        query = query.filter(Video.visibility == VideoVisibility.PRIVATE.value)
+
+    if owner_filter:
+        query = query.filter(Video.owner_username == owner_filter)
+
+    # Apply sorting
+    if sort_by == 'oldest':
+        query = query.order_by(Video.created_at.asc())
+    elif sort_by == 'views':
+        query = query.order_by(Video.view_count.desc())
+    elif sort_by == 'title':
+        query = query.order_by(Video.title.asc())
+    else:  # newest (default)
+        query = query.order_by(Video.created_at.desc())
+
+    videos_list = query.all()
+
+    # Get unique owners for filter dropdown
+    owners = db.session.query(Video.owner_username).distinct().filter(
+        Video.owner_username != None
+    ).order_by(Video.owner_username).all()
+    owners = [o[0] for o in owners]
+
+    return render_template('admin/videos.html',
+        videos=videos_list,
+        owners=owners,
+        current_visibility=visibility_filter,
+        current_owner=owner_filter,
+        current_sort=sort_by,
+    )
+
+
+@admin_bp.route('/videos/bulk-action', methods=['POST'])
+@login_required
+@admin_required
+def videos_bulk_action():
+    """Handle bulk actions on videos."""
+    action = request.form.get('action')
+    video_ids = request.form.getlist('video_ids')
+
+    if not video_ids:
+        flash('No videos selected.', 'warning')
+        return redirect(url_for('admin.videos'))
+
+    videos_folder = Path(current_app.config.get('VIDEOS_FOLDER', ''))
+    thumbnails_folder = Path(current_app.config.get('THUMBNAILS_FOLDER', ''))
+
+    if action == 'delete':
+        deleted_count = 0
+        for video_id in video_ids:
+            video = Video.query.get(int(video_id))
+            if video:
+                # Delete video files
+                for ext in ['.m3u8', '_master.m3u8']:
+                    file_path = videos_folder / f"{video.filename}{ext}"
+                    if file_path.exists():
+                        file_path.unlink()
+
+                # Delete segment files
+                for ts_file in videos_folder.glob(f"{video.filename}_*.ts"):
+                    ts_file.unlink()
+
+                # Delete thumbnail
+                if video.thumbnail:
+                    thumb_path = thumbnails_folder / video.thumbnail
+                    if thumb_path.exists():
+                        thumb_path.unlink()
+
+                # Delete preview
+                if video.preview:
+                    preview_path = thumbnails_folder / video.preview
+                    if preview_path.exists():
+                        preview_path.unlink()
+
+                # Delete related records
+                Comment.query.filter_by(video_id=video.id).delete()
+                Favorite.query.filter_by(video_id=video.id).delete()
+                WatchHistory.query.filter_by(video_id=video.id).delete()
+                EncodingJob.query.filter_by(video_id=video.id).delete()
+
+                # Delete from playlists
+                from rtube.models import PlaylistVideo
+                PlaylistVideo.query.filter_by(video_id=video.id).delete()
+
+                db.session.delete(video)
+                deleted_count += 1
+
+        db.session.commit()
+        flash(f'Successfully deleted {deleted_count} video(s).', 'success')
+
+    elif action == 'make_public':
+        updated_count = 0
+        for video_id in video_ids:
+            video = Video.query.get(int(video_id))
+            if video and video.visibility != VideoVisibility.PUBLIC.value:
+                video.visibility = VideoVisibility.PUBLIC.value
+                updated_count += 1
+        db.session.commit()
+        flash(f'Changed {updated_count} video(s) to public.', 'success')
+
+    elif action == 'make_private':
+        updated_count = 0
+        for video_id in video_ids:
+            video = Video.query.get(int(video_id))
+            if video and video.visibility != VideoVisibility.PRIVATE.value:
+                video.visibility = VideoVisibility.PRIVATE.value
+                updated_count += 1
+        db.session.commit()
+        flash(f'Changed {updated_count} video(s) to private.', 'success')
+
+    else:
+        flash('Unknown action.', 'error')
+
+    return redirect(url_for('admin.videos'))
