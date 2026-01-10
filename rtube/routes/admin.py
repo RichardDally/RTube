@@ -357,7 +357,17 @@ def analytics():
     now = datetime.utcnow()
     today = now.date()
     week_ago = today - timedelta(days=7)
-    month_ago = today - timedelta(days=30)
+
+    # Get period from query param (default: 30 days)
+    period = request.args.get('period', '30d')
+    period_map = {
+        '30d': 30,
+        '6m': 180,
+        '1y': 365,
+        '5y': 1825,
+    }
+    period_days = period_map.get(period, 30)
+    period_start = today - timedelta(days=period_days)
 
     # === Overview Stats ===
     total_videos = Video.query.count()
@@ -408,13 +418,13 @@ def analytics():
         'encoding': EncodingJob.query.filter_by(status='encoding').count(),
     }
 
-    # === Activity Over Time (last 30 days) ===
+    # === Activity Over Time (configurable period) ===
     # Videos uploaded per day
     videos_by_day = db.session.query(
         func.date(Video.created_at).label('date'),
         func.count(Video.id).label('count')
     ).filter(
-        Video.created_at >= month_ago
+        Video.created_at >= period_start
     ).group_by(
         func.date(Video.created_at)
     ).order_by('date').all()
@@ -424,7 +434,7 @@ def analytics():
         func.date(Comment.created_at).label('date'),
         func.count(Comment.id).label('count')
     ).filter(
-        Comment.created_at >= month_ago,
+        Comment.created_at >= period_start,
         Comment.is_deleted == False
     ).group_by(
         func.date(Comment.created_at)
@@ -435,7 +445,7 @@ def analytics():
         func.date(User.created_at).label('date'),
         func.count(User.id).label('count')
     ).filter(
-        User.created_at >= month_ago
+        User.created_at >= period_start
     ).group_by(
         func.date(User.created_at)
     ).order_by('date').all()
@@ -450,10 +460,18 @@ def analytics():
     comments_dict = {str(row.date): row.count for row in comments_by_day}
     users_dict = {str(row.date): row.count for row in users_by_day}
 
-    for i in range(30, -1, -1):
+    # Determine label format based on period length
+    if period_days <= 60:
+        date_format = '%b %d'  # Jan 15
+    elif period_days <= 365:
+        date_format = '%b %d'  # Jan 15
+    else:
+        date_format = '%b %Y'  # Jan 2024
+
+    for i in range(period_days, -1, -1):
         day = today - timedelta(days=i)
         day_str = str(day)
-        chart_labels.append(day.strftime('%b %d'))
+        chart_labels.append(day.strftime(date_format))
         chart_videos.append(videos_dict.get(day_str, 0))
         chart_comments.append(comments_dict.get(day_str, 0))
         chart_users.append(users_dict.get(day_str, 0))
@@ -542,4 +560,5 @@ def analytics():
         top_commenters=top_commenters,
         role_stats=role_stats,
         weekly_comparison=weekly_comparison,
+        current_period=period,
     )

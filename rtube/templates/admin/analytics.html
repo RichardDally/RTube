@@ -156,6 +156,30 @@
                 height: 300px;
             }
 
+            /* Period Selector */
+            .period-selector {
+                display: flex;
+                gap: 5px;
+            }
+            .period-selector button {
+                padding: 6px 12px;
+                background-color: #333;
+                color: #888;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .period-selector button:hover {
+                background-color: #444;
+                color: #fff;
+            }
+            .period-selector button.active {
+                background-color: #1565C0;
+                color: #fff;
+            }
+
             /* Tables */
             table {
                 width: 100%;
@@ -370,7 +394,15 @@
         <div class="dashboard-grid">
             <!-- Activity Chart -->
             <div class="panel">
-                <h2>Activity (Last 30 Days)</h2>
+                <div class="panel-header">
+                    <h2>Activity</h2>
+                    <div class="period-selector">
+                        <button onclick="changePeriod('30d')" class="{{ 'active' if current_period == '30d' else '' }}">30 Days</button>
+                        <button onclick="changePeriod('6m')" class="{{ 'active' if current_period == '6m' else '' }}">6 Months</button>
+                        <button onclick="changePeriod('1y')" class="{{ 'active' if current_period == '1y' else '' }}">1 Year</button>
+                        <button onclick="changePeriod('5y')" class="{{ 'active' if current_period == '5y' else '' }}">5 Years</button>
+                    </div>
+                </div>
                 <div class="chart-container">
                     <canvas id="activityChart"></canvas>
                 </div>
@@ -472,7 +504,7 @@
                     <tbody>
                         {% for uploader in top_uploaders %}
                         <tr>
-                            <td>{{ uploader.owner_username }}</td>
+                            <td><a href="{{ url_for('auth.user_profile', username=uploader.owner_username) }}">{{ uploader.owner_username }}</a></td>
                             <td style="text-align: right;">{{ uploader.video_count }}</td>
                             <td style="text-align: right;">{{ "{:,}".format(uploader.total_views or 0) }}</td>
                         </tr>
@@ -494,7 +526,7 @@
                 <div class="recent-item">
                     <div class="title"><a href="/watch?v={{ video.short_id }}">{{ video.title or video.filename }}</a></div>
                     <div class="meta">
-                        by {{ video.owner_username or 'Unknown' }} &bull;
+                        by {% if video.owner_username %}<a href="{{ url_for('auth.user_profile', username=video.owner_username) }}">{{ video.owner_username }}</a>{% else %}Unknown{% endif %} &bull;
                         {{ video.created_at.strftime('%b %d, %Y at %H:%M') }} &bull;
                         {{ video.view_count }} views
                     </div>
@@ -511,7 +543,7 @@
                 {% if recent_comments %}
                 {% for comment in recent_comments %}
                 <div class="recent-item">
-                    <div class="title">{{ comment.author_username }}</div>
+                    <div class="title"><a href="{{ url_for('auth.user_profile', username=comment.author_username) }}">{{ comment.author_username }}</a></div>
                     <div class="meta">
                         {{ comment.content[:100] }}{% if comment.content|length > 100 %}...{% endif %}
                         <br>
@@ -540,7 +572,7 @@
                     <tbody>
                         {% for commenter in top_commenters %}
                         <tr>
-                            <td>{{ commenter.author_username }}</td>
+                            <td><a href="{{ url_for('auth.user_profile', username=commenter.author_username) }}">{{ commenter.author_username }}</a></td>
                             <td style="text-align: right;">{{ commenter.comment_count }}</td>
                         </tr>
                         {% endfor %}
@@ -570,7 +602,7 @@
                 {% if recent_users %}
                 {% for user in recent_users %}
                 <div class="recent-item">
-                    <div class="title">{{ user.username }}</div>
+                    <div class="title"><a href="{{ url_for('auth.user_profile', username=user.username) }}">{{ user.username }}</a></div>
                     <div class="meta">
                         {{ user.role }} &bull;
                         Joined {{ user.created_at.strftime('%b %d, %Y') }}
@@ -586,6 +618,13 @@
         <footer>RTube v{{ rtube_version }}</footer>
 
         <script>
+            // Period selector
+            function changePeriod(period) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('period', period);
+                window.location.href = url.toString();
+            }
+
             // Activity Chart
             const ctx = document.getElementById('activityChart').getContext('2d');
             new Chart(ctx, {
