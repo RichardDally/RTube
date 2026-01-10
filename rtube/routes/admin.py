@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, abort, request, redirect, url_for,
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
-from rtube.models import db, Video, VideoVisibility, Comment, Playlist, Favorite, EncodingJob, WatchHistory, AuditLog
+from rtube.models import db, Video, VideoVisibility, Comment, Playlist, Favorite, EncodingJob, WatchHistory, AuditLog, Announcement
 from rtube.models_auth import User, UserRole
 
 
@@ -836,3 +836,113 @@ def audit_log():
         current_action=action_filter,
         current_username=username_filter,
     )
+
+
+@admin_bp.route('/announcements')
+@login_required
+@admin_required
+def announcements():
+    """Manage site-wide announcements."""
+    all_announcements = Announcement.query.order_by(Announcement.created_at.desc()).all()
+    return render_template('admin/announcements.html', announcements=all_announcements)
+
+
+@admin_bp.route('/announcements/create', methods=['POST'])
+@login_required
+@admin_required
+def create_announcement():
+    """Create a new announcement."""
+    message = request.form.get('message', '').strip()
+    duration_days = request.form.get('duration_days', '').strip()
+
+    if not message:
+        flash('Announcement message is required.', 'error')
+        return redirect(url_for('admin.announcements'))
+
+    # Calculate expiration date
+    expires_at = None
+    if duration_days:
+        try:
+            days = int(duration_days)
+            if days > 0:
+                expires_at = datetime.utcnow() + timedelta(days=days)
+        except ValueError:
+            flash('Invalid duration. Please enter a valid number of days.', 'error')
+            return redirect(url_for('admin.announcements'))
+
+    announcement = Announcement(
+        message=message,
+        is_active=True,
+        expires_at=expires_at,
+        created_by=current_user.username
+    )
+    db.session.add(announcement)
+    db.session.commit()
+
+    logger.info(f"Admin '{current_user.username}' created announcement ID {announcement.id}")
+
+    # Audit log
+    AuditLog.log(
+        username=current_user.username,
+        action='announcement_create',
+        target_type='announcement',
+        target_id=announcement.id,
+        details=f"Created announcement: {message[:100]}{'...' if len(message) > 100 else ''}",
+        ip_address=get_client_ip()
+    )
+
+    flash('Announcement created successfully.', 'success')
+    return redirect(url_for('admin.announcements'))
+
+
+@admin_bp.route('/announcements/<int:announcement_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_announcement(announcement_id):
+    """Toggle announcement active status."""
+    announcement = Announcement.query.get_or_404(announcement_id)
+    announcement.is_active = not announcement.is_active
+    db.session.commit()
+
+    status = 'activated' if announcement.is_active else 'deactivated'
+    logger.info(f"Admin '{current_user.username}' {status} announcement ID {announcement_id}")
+
+    # Audit log
+    AuditLog.log(
+        username=current_user.username,
+        action='announcement_toggle',
+        target_type='announcement',
+        target_id=announcement_id,
+        details=f"Announcement {status}",
+        ip_address=get_client_ip()
+    )
+
+    flash(f'Announcement {status}.', 'success')
+    return redirect(url_for('admin.announcements'))
+
+
+@admin_bp.route('/announcements/<int:announcement_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_announcement(announcement_id):
+    """Delete an announcement."""
+    announcement = Announcement.query.get_or_404(announcement_id)
+    message_preview = announcement.message[:100]
+
+    db.session.delete(announcement)
+    db.session.commit()
+
+    logger.info(f"Admin '{current_user.username}' deleted announcement ID {announcement_id}")
+
+    # Audit log
+    AuditLog.log(
+        username=current_user.username,
+        action='announcement_delete',
+        target_type='announcement',
+        target_id=announcement_id,
+        details=f"Deleted announcement: {message_preview}{'...' if len(message_preview) == 100 else ''}",
+        ip_address=get_client_ip()
+    )
+
+    flash('Announcement deleted.', 'success')
+    return redirect(url_for('admin.announcements'))

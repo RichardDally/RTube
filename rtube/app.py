@@ -271,13 +271,25 @@ def create_app(test_config=None):
             current_user.last_seen = datetime.utcnow()
             db.session.commit()
 
-    # Inject version and auth status into all templates
+    # Inject version, auth status, and active announcement into all templates
     @app.context_processor
     def inject_globals():
         import rtube
+        from rtube.models import Announcement
+
+        # Get active, non-expired announcement (most recent)
+        active_announcement = Announcement.query.filter(
+            Announcement.is_active == True
+        ).order_by(Announcement.created_at.desc()).first()
+
+        # Filter out expired announcements
+        if active_announcement and active_announcement.is_expired():
+            active_announcement = None
+
         return {
             "rtube_version": rtube.__version__,
             "oidc_enabled": app.config.get("OIDC_ENABLED", False),
+            "active_announcement": active_announcement,
         }
 
     # Custom Jinja2 filter to convert URLs to clickable links

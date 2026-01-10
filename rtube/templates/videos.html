@@ -367,6 +367,39 @@
             .btn-clear:hover {
                 background-color: #555;
             }
+            /* Announcement banner */
+            .announcement-banner {
+                background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%);
+                color: #fff;
+                padding: 12px 20px;
+                border-radius: 6px;
+                margin-bottom: 20px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-size: 14px;
+                line-height: 1.4;
+            }
+            .announcement-banner .announcement-icon {
+                font-size: 18px;
+                flex-shrink: 0;
+            }
+            .announcement-banner .announcement-message {
+                flex: 1;
+            }
+            .announcement-banner .announcement-close {
+                background: none;
+                border: none;
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 20px;
+                cursor: pointer;
+                padding: 0 5px;
+                line-height: 1;
+                transition: color 0.2s;
+            }
+            .announcement-banner .announcement-close:hover {
+                color: #fff;
+            }
         </style>
     </head>
     <body>
@@ -394,6 +427,7 @@
                         <a href="{{ url_for('admin.videos') }}">Videos</a>
                         <a href="{{ url_for('admin.import_videos') }}">Import Videos</a>
                         <a href="{{ url_for('admin.regenerate_previews') }}">Regenerate Previews</a>
+                        <a href="{{ url_for('admin.announcements') }}">Announcements</a>
                         <a href="{{ url_for('admin.audit_log') }}">Audit Log</a>
                     </div>
                 </div>
@@ -418,6 +452,14 @@
             <a href="/" class="btn-clear">Clear</a>
             {% endif %}
         </form>
+
+        {% if active_announcement %}
+        <div class="announcement-banner" id="announcement-{{ active_announcement.id }}">
+            <span class="announcement-icon">&#128227;</span>
+            <span class="announcement-message">{{ active_announcement.message }}</span>
+            <button class="announcement-close" onclick="dismissAnnouncement({{ active_announcement.id }})" title="Dismiss">&times;</button>
+        </div>
+        {% endif %}
 
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -607,6 +649,26 @@
         {% endif %}
         <footer>RTube v{{ rtube_version }}</footer>
         <script>
+            // Dismiss announcement (stores in sessionStorage)
+            function dismissAnnouncement(announcementId) {
+                var banner = document.getElementById('announcement-' + announcementId);
+                if (banner) {
+                    banner.style.display = 'none';
+                    sessionStorage.setItem('dismissed-announcement-' + announcementId, 'true');
+                }
+            }
+
+            // Check if announcement was dismissed in this session
+            (function() {
+                var banners = document.querySelectorAll('.announcement-banner');
+                banners.forEach(function(banner) {
+                    var id = banner.id.replace('announcement-', '');
+                    if (sessionStorage.getItem('dismissed-announcement-' + id) === 'true') {
+                        banner.style.display = 'none';
+                    }
+                });
+            })();
+
             // Video preview on hover - lazy load and play
             console.log('Initializing video previews...');
             var containers = document.querySelectorAll('.thumbnail-container');

@@ -230,3 +230,32 @@ class AuditLog(db.Model):
         db.session.add(entry)
         db.session.commit()
         return entry
+
+
+class Announcement(db.Model):
+    """Site-wide announcement banners."""
+    __tablename__ = "announcements"
+
+    id = db.Column(db.Integer, primary_key=True)
+    message = db.Column(db.Text, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=True)  # None means no expiration
+    created_by = db.Column(db.String(80), nullable=False)  # Admin who created it
+
+    def is_expired(self) -> bool:
+        """Check if announcement has expired."""
+        if self.expires_at is None:
+            return False
+        return datetime.utcnow() > self.expires_at
+
+    def is_visible(self) -> bool:
+        """Check if announcement should be displayed."""
+        return self.is_active and not self.is_expired()
+
+    def days_remaining(self) -> int | None:
+        """Return number of days until expiration, or None if no expiration."""
+        if self.expires_at is None:
+            return None
+        delta = self.expires_at - datetime.utcnow()
+        return max(0, delta.days)
