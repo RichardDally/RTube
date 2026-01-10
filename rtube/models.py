@@ -186,3 +186,47 @@ class WatchHistory(db.Model):
         if not self.duration or self.duration == 0:
             return False
         return (self.position / self.duration) >= threshold
+
+
+class AuditLog(db.Model):
+    """Track admin actions for auditing purposes."""
+    __tablename__ = "audit_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    username = db.Column(db.String(80), nullable=False, index=True)  # Admin who performed the action
+    action = db.Column(db.String(50), nullable=False, index=True)  # Action type
+    target_type = db.Column(db.String(50), nullable=True)  # 'user', 'video', 'comment', etc.
+    target_id = db.Column(db.String(100), nullable=True)  # ID or identifier of the target
+    target_name = db.Column(db.String(255), nullable=True)  # Human-readable name of the target
+    details = db.Column(db.Text, nullable=True)  # JSON or text with additional details
+    ip_address = db.Column(db.String(45), nullable=True)  # IPv4 or IPv6
+
+    # Action constants
+    ACTION_USER_ROLE_CHANGE = "user_role_change"
+    ACTION_USER_PASSWORD_CHANGE = "user_password_change"
+    ACTION_VIDEO_DELETE = "video_delete"
+    ACTION_VIDEO_VISIBILITY_CHANGE = "video_visibility_change"
+    ACTION_VIDEO_IMPORT = "video_import"
+    ACTION_COMMENT_DELETE = "comment_delete"
+    ACTION_BULK_VIDEO_DELETE = "bulk_video_delete"
+    ACTION_BULK_VISIBILITY_CHANGE = "bulk_visibility_change"
+    ACTION_PREVIEW_REGENERATE = "preview_regenerate"
+
+    @classmethod
+    def log(cls, username: str, action: str, target_type: str = None,
+            target_id: str = None, target_name: str = None,
+            details: str = None, ip_address: str = None):
+        """Create an audit log entry."""
+        entry = cls(
+            username=username,
+            action=action,
+            target_type=target_type,
+            target_id=str(target_id) if target_id else None,
+            target_name=target_name,
+            details=details,
+            ip_address=ip_address
+        )
+        db.session.add(entry)
+        db.session.commit()
+        return entry

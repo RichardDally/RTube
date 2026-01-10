@@ -6,9 +6,18 @@ from flask import Blueprint, render_template, abort, request, redirect, url_for,
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
-from rtube.models import db, Video, VideoVisibility, Comment, Playlist, Favorite, EncodingJob, WatchHistory
+from rtube.models import db, Video, VideoVisibility, Comment, Playlist, Favorite, EncodingJob, WatchHistory, AuditLog
 from rtube.models_auth import User, UserRole
+
+
 from rtube.services.encoder import encoder_service
+
+
+def get_client_ip():
+    """Get client IP address from request."""
+    if request.headers.get('X-Forwarded-For'):
+        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    return request.remote_addr
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +117,18 @@ def change_password():
         current_user.set_password(new_password)
         db.session.commit()
         logger.info(f"Admin user '{current_user.username}' changed their password")
+
+        # Audit log
+        AuditLog.log(
+            username=current_user.username,
+            action=AuditLog.ACTION_USER_PASSWORD_CHANGE,
+            target_type='user',
+            target_id=current_user.id,
+            target_name=current_user.username,
+            details='Admin changed their own password',
+            ip_address=get_client_ip()
+        )
+
         flash('Password changed successfully', 'success')
         return redirect(url_for('admin.users'))
 
@@ -141,6 +162,18 @@ def change_user_role(username):
     db.session.commit()
 
     logger.info(f"Admin '{current_user.username}' changed role of user '{username}' from '{old_role}' to '{new_role}'")
+
+    # Audit log
+    AuditLog.log(
+        username=current_user.username,
+        action=AuditLog.ACTION_USER_ROLE_CHANGE,
+        target_type='user',
+        target_id=user.id,
+        target_name=username,
+        details=f"Role changed from '{old_role}' to '{new_role}'",
+        ip_address=get_client_ip()
+    )
+
     flash(f"Role of '{username}' changed to '{new_role}'", 'success')
     return redirect(url_for('admin.users'))
 
@@ -271,6 +304,16 @@ def import_videos_submit():
     if imported_count > 0:
         db.session.commit()
         logger.info(f"Admin '{current_user.username}' imported {imported_count} orphan video(s) with {thumbnail_count} thumbnail(s) and {preview_count} preview(s)")
+
+        # Audit log
+        AuditLog.log(
+            username=current_user.username,
+            action=AuditLog.ACTION_VIDEO_IMPORT,
+            target_type='video',
+            details=f"Imported {imported_count} video(s): {', '.join(selected_filenames[:5])}{'...' if len(selected_filenames) > 5 else ''}",
+            ip_address=get_client_ip()
+        )
+
         flash(f'Successfully imported {imported_count} video(s) with {thumbnail_count} thumbnail(s) and {preview_count} preview(s)', 'success')
     else:
         flash('No videos were imported', 'warning')
@@ -323,6 +366,16 @@ def regenerate_previews_submit():
     if preview_count > 0:
         db.session.commit()
         logger.info(f"Admin '{current_user.username}' regenerated {preview_count} preview(s)")
+
+        # Audit log
+        AuditLog.log(
+            username=current_user.username,
+            action=AuditLog.ACTION_PREVIEW_REGENERATE,
+            target_type='video',
+            details=f"Regenerated {preview_count} preview(s)",
+            ip_address=get_client_ip()
+        )
+
         flash(f'Successfully generated {preview_count} preview(s)', 'success')
     else:
         flash('No previews were generated', 'warning')
@@ -669,6 +722,17 @@ def videos_bulk_action():
                 deleted_count += 1
 
         db.session.commit()
+
+        # Audit log
+        if deleted_count > 0:
+            AuditLog.log(
+                username=current_user.username,
+                action=AuditLog.ACTION_BULK_VIDEO_DELETE,
+                target_type='video',
+                details=f"Deleted {deleted_count} video(s)",
+                ip_address=get_client_ip()
+            )
+
         flash(f'Successfully deleted {deleted_count} video(s).', 'success')
 
     elif action == 'make_public':
@@ -679,6 +743,17 @@ def videos_bulk_action():
                 video.visibility = VideoVisibility.PUBLIC.value
                 updated_count += 1
         db.session.commit()
+
+        # Audit log
+        if updated_count > 0:
+            AuditLog.log(
+                username=current_user.username,
+                action=AuditLog.ACTION_BULK_VISIBILITY_CHANGE,
+                target_type='video',
+                details=f"Changed {updated_count} video(s) to public",
+                ip_address=get_client_ip()
+            )
+
         flash(f'Changed {updated_count} video(s) to public.', 'success')
 
     elif action == 'make_private':
@@ -689,9 +764,75 @@ def videos_bulk_action():
                 video.visibility = VideoVisibility.PRIVATE.value
                 updated_count += 1
         db.session.commit()
+
+        # Audit log
+        if updated_count > 0:
+            AuditLog.log(
+                username=current_user.username,
+                action=AuditLog.ACTION_BULK_VISIBILITY_CHANGE,
+                target_type='video',
+                details=f"Changed {updated_count} video(s) to private",
+                ip_address=get_client_ip()
+            )
+
         flash(f'Changed {updated_count} video(s) to private.', 'success')
 
     else:
         flash('Unknown action.', 'error')
 
     return redirect(url_for('admin.videos'))
+
+
+@admin_bp.route('/audit-log')
+@login_required
+@admin_required
+def audit_log():
+    """Display audit log of admin actions."""
+    # Get filter parameters
+    action_filter = request.args.get('action', '')
+    username_filter = request.args.get('username', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+
+    # Base query
+    query = AuditLog.query
+
+    # Apply filters
+    if action_filter:
+        query = query.filter(AuditLog.action == action_filter)
+    if username_filter:
+        query = query.filter(AuditLog.username == username_filter)
+
+    # Order by most recent and paginate
+    query = query.order_by(AuditLog.timestamp.desc())
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    # Get unique actions and usernames for filter dropdowns
+    actions = db.session.query(AuditLog.action).distinct().order_by(AuditLog.action).all()
+    actions = [a[0] for a in actions]
+
+    usernames = db.session.query(AuditLog.username).distinct().order_by(AuditLog.username).all()
+    usernames = [u[0] for u in usernames]
+
+    # Action labels for display
+    action_labels = {
+        AuditLog.ACTION_USER_ROLE_CHANGE: 'User Role Change',
+        AuditLog.ACTION_USER_PASSWORD_CHANGE: 'Password Change',
+        AuditLog.ACTION_VIDEO_DELETE: 'Video Delete',
+        AuditLog.ACTION_VIDEO_VISIBILITY_CHANGE: 'Visibility Change',
+        AuditLog.ACTION_VIDEO_IMPORT: 'Video Import',
+        AuditLog.ACTION_COMMENT_DELETE: 'Comment Delete',
+        AuditLog.ACTION_BULK_VIDEO_DELETE: 'Bulk Video Delete',
+        AuditLog.ACTION_BULK_VISIBILITY_CHANGE: 'Bulk Visibility Change',
+        AuditLog.ACTION_PREVIEW_REGENERATE: 'Preview Regenerate',
+    }
+
+    return render_template('admin/audit_log.html',
+        logs=pagination.items,
+        pagination=pagination,
+        actions=actions,
+        usernames=usernames,
+        action_labels=action_labels,
+        current_action=action_filter,
+        current_username=username_filter,
+    )

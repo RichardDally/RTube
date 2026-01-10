@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>RTube - Admin - Audit Log</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #1a1a1a;
+                color: #fff;
+            }
+            h1 {
+                margin-bottom: 10px;
+            }
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+            }
+            .header-left {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+            }
+            .back-link {
+                color: #888;
+                text-decoration: none;
+                font-size: 14px;
+            }
+            .back-link:hover {
+                color: #fff;
+            }
+            .log-count {
+                color: #888;
+                font-size: 14px;
+            }
+            .admin-nav {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+            }
+            .admin-nav a {
+                padding: 10px 16px;
+                background-color: #2a2a2a;
+                color: #fff;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size: 13px;
+                transition: background-color 0.2s;
+            }
+            .admin-nav a:hover {
+                background-color: #3a3a3a;
+            }
+            .admin-nav a.active {
+                background-color: #1565C0;
+            }
+
+            /* Filters */
+            .filters {
+                display: flex;
+                gap: 15px;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            .filter-group {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .filter-group label {
+                color: #888;
+                font-size: 13px;
+            }
+            .filter-group select {
+                padding: 8px 12px;
+                background-color: #2a2a2a;
+                color: #fff;
+                border: 1px solid #444;
+                border-radius: 4px;
+                font-size: 13px;
+                cursor: pointer;
+            }
+            .filter-group select:focus {
+                outline: none;
+                border-color: #1565C0;
+            }
+            .btn-clear-filters {
+                padding: 8px 16px;
+                background-color: #444;
+                color: #fff;
+                text-decoration: none;
+                border-radius: 4px;
+                font-size: 13px;
+                transition: background-color 0.2s;
+            }
+            .btn-clear-filters:hover {
+                background-color: #555;
+            }
+
+            /* Table */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                background-color: #2a2a2a;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            th, td {
+                padding: 12px 15px;
+                text-align: left;
+                border-bottom: 1px solid #333;
+            }
+            th {
+                background-color: #333;
+                font-weight: 600;
+                color: #aaa;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            tr:last-child td {
+                border-bottom: none;
+            }
+            tr:hover {
+                background-color: #333;
+            }
+
+            /* Action badge */
+            .action-badge {
+                display: inline-block;
+                padding: 4px 10px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+            }
+            .action-user_role_change {
+                background-color: #1565C0;
+                color: #fff;
+            }
+            .action-user_password_change {
+                background-color: #7B1FA2;
+                color: #fff;
+            }
+            .action-video_delete,
+            .action-bulk_video_delete {
+                background-color: #c62828;
+                color: #fff;
+            }
+            .action-video_visibility_change,
+            .action-bulk_visibility_change {
+                background-color: #F57C00;
+                color: #fff;
+            }
+            .action-video_import {
+                background-color: #2E7D32;
+                color: #fff;
+            }
+            .action-comment_delete {
+                background-color: #5D4037;
+                color: #fff;
+            }
+            .action-preview_regenerate {
+                background-color: #00838F;
+                color: #fff;
+            }
+
+            /* Target info */
+            .target-info {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+            .target-type {
+                color: #888;
+                font-size: 11px;
+                text-transform: uppercase;
+            }
+            .target-name {
+                color: #fff;
+            }
+
+            /* Details */
+            .details {
+                color: #aaa;
+                font-size: 13px;
+                max-width: 300px;
+            }
+
+            /* IP address */
+            .ip-address {
+                color: #888;
+                font-size: 12px;
+                font-family: monospace;
+            }
+
+            /* Timestamp */
+            .timestamp {
+                color: #888;
+                font-size: 13px;
+                white-space: nowrap;
+            }
+
+            /* Username link */
+            .username-link {
+                color: #4CAF50;
+                text-decoration: none;
+            }
+            .username-link:hover {
+                text-decoration: underline;
+            }
+
+            /* Pagination */
+            .pagination {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 10px;
+                margin-top: 20px;
+            }
+            .pagination a, .pagination span {
+                padding: 8px 12px;
+                background-color: #2a2a2a;
+                color: #fff;
+                text-decoration: none;
+                border-radius: 4px;
+                font-size: 13px;
+            }
+            .pagination a:hover {
+                background-color: #3a3a3a;
+            }
+            .pagination .current {
+                background-color: #1565C0;
+            }
+            .pagination .disabled {
+                color: #666;
+                cursor: not-allowed;
+            }
+            .pagination-info {
+                color: #888;
+                font-size: 13px;
+            }
+
+            /* Empty state */
+            .empty-state {
+                text-align: center;
+                padding: 60px 20px;
+                color: #888;
+                background-color: #2a2a2a;
+                border-radius: 8px;
+            }
+            .empty-state h2 {
+                color: #666;
+                margin-bottom: 10px;
+            }
+
+            footer {
+                margin-top: 50px;
+                padding-top: 20px;
+                border-top: 1px solid #333;
+                text-align: center;
+                color: #666;
+                font-size: 12px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="header-left">
+                <a href="/" class="back-link">&larr; Back to RTube</a>
+                <h1>Audit Log</h1>
+                <span class="log-count">{{ pagination.total }} entr{{ 'ies' if pagination.total != 1 else 'y' }}</span>
+            </div>
+        </div>
+
+        <nav class="admin-nav">
+            <a href="{{ url_for('admin.analytics') }}">Analytics</a>
+            <a href="{{ url_for('admin.users') }}">Users</a>
+            <a href="{{ url_for('admin.videos') }}">Videos</a>
+            <a href="{{ url_for('admin.import_videos') }}">Import Videos</a>
+            <a href="{{ url_for('admin.regenerate_previews') }}">Regenerate Previews</a>
+            <a href="{{ url_for('admin.audit_log') }}" class="active">Audit Log</a>
+        </nav>
+
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-group">
+                <label>Action:</label>
+                <select onchange="applyFilters()" id="filter-action">
+                    <option value="">All actions</option>
+                    {% for action in actions %}
+                    <option value="{{ action }}" {{ 'selected' if current_action == action }}>{{ action_labels.get(action, action) }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Admin:</label>
+                <select onchange="applyFilters()" id="filter-username">
+                    <option value="">All admins</option>
+                    {% for username in usernames %}
+                    <option value="{{ username }}" {{ 'selected' if current_username == username }}>{{ username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if current_action or current_username %}
+            <a href="{{ url_for('admin.audit_log') }}" class="btn-clear-filters">Clear Filters</a>
+            {% endif %}
+        </div>
+
+        {% if logs %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Admin</th>
+                    <th>Action</th>
+                    <th>Target</th>
+                    <th>Details</th>
+                    <th>IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td class="timestamp">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        <a href="{{ url_for('auth.user_profile', username=log.username) }}" class="username-link">{{ log.username }}</a>
+                    </td>
+                    <td>
+                        <span class="action-badge action-{{ log.action }}">{{ action_labels.get(log.action, log.action) }}</span>
+                    </td>
+                    <td>
+                        {% if log.target_type or log.target_name %}
+                        <div class="target-info">
+                            {% if log.target_type %}
+                            <span class="target-type">{{ log.target_type }}</span>
+                            {% endif %}
+                            {% if log.target_name %}
+                            <span class="target-name">{{ log.target_name }}</span>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <span style="color: #666;">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.details %}
+                        <span class="details">{{ log.details }}</span>
+                        {% else %}
+                        <span style="color: #666;">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="ip-address">{{ log.ip_address or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        {% if pagination.pages > 1 %}
+        <div class="pagination">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('admin.audit_log', page=pagination.prev_num, action=current_action, username=current_username) }}">&laquo; Prev</a>
+            {% else %}
+            <span class="disabled">&laquo; Prev</span>
+            {% endif %}
+
+            <span class="pagination-info">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+
+            {% if pagination.has_next %}
+            <a href="{{ url_for('admin.audit_log', page=pagination.next_num, action=current_action, username=current_username) }}">Next &raquo;</a>
+            {% else %}
+            <span class="disabled">Next &raquo;</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <h2>No audit log entries</h2>
+            <p>Admin actions will be logged here.</p>
+        </div>
+        {% endif %}
+
+        <footer>RTube v{{ rtube_version }}</footer>
+
+        <script>
+            function applyFilters() {
+                const action = document.getElementById('filter-action').value;
+                const username = document.getElementById('filter-username').value;
+
+                const url = new URL(window.location.href);
+                url.searchParams.delete('page');
+
+                if (action) {
+                    url.searchParams.set('action', action);
+                } else {
+                    url.searchParams.delete('action');
+                }
+                if (username) {
+                    url.searchParams.set('username', username);
+                } else {
+                    url.searchParams.delete('username');
+                }
+                window.location.href = url.toString();
+            }
+        </script>
+    </body>
+</html>
