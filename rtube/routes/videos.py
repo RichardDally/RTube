@@ -246,6 +246,11 @@ def watch_video():
         include_private=current_user.is_authenticated
     )
 
+    # Comment sorting
+    sort_order = request.args.get('sort', 'newest')
+    if sort_order not in ('newest', 'oldest'):
+        sort_order = 'newest'
+
     video_url = url_for('videos.serve_video', filename=f"{video.filename}.m3u8")
     logger.info(f"Loading video from [{video_url}]")
     return render_template(
@@ -259,6 +264,7 @@ def watch_video():
         start_time=start_time,
         is_favorite=is_favorite,
         recommended_videos=recommended_videos,
+        current_sort=sort_order,
     )
 
 
