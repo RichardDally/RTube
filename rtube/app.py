@@ -1,5 +1,6 @@
 import os
 import re
+import logging
 import secrets
 from datetime import datetime
 from pathlib import Path
@@ -317,5 +318,10 @@ def create_app(test_config=None):
 
         result = url_pattern.sub(replace_url, text)
         return Markup(result)
+
+    if __name__ != '__main__':
+        gunicorn_logger = logging.getLogger('gunicorn.error')
+        app.logger.handlers = gunicorn_logger.handlers
+        app.logger.setLevel(gunicorn_logger.level)
 
     return app
