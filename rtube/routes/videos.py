@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 from flask import Blueprint, render_template, current_app, flash, redirect, url_for, request, abort, send_from_directory
 from flask_login import current_user, login_required
@@ -6,8 +5,6 @@ from flask_login import current_user, login_required
 from datetime import datetime, timedelta
 from rtube.models import db, Video, VideoVisibility, Comment, EncodingJob, Favorite, PlaylistVideo, WatchHistory
 from rtube.models_auth import User, UserRole
-
-logger = logging.getLogger(__name__)
 
 videos_bp = Blueprint('videos', __name__)
 
@@ -252,7 +249,7 @@ def watch_video():
         sort_order = 'newest'
 
     video_url = url_for('videos.serve_video', filename=f"{video.filename}.m3u8")
-    logger.info(f"Loading video from [{video_url}]")
+    current_app.logger.info(f"Loading video from [{video_url}]")
     return render_template(
         'index.html',
         filename=video.title or video.filename,
@@ -470,7 +467,7 @@ def edit_video():
                 new_owner_user = User.query.filter_by(username=new_owner).first()
                 if new_owner_user and new_owner_user.can_upload():
                     if video.owner_username != new_owner:
-                        logger.info(f"Admin '{current_user.username}' changed owner of video '{video.short_id}' from '{video.owner_username}' to '{new_owner}'")
+                        current_app.logger.info(f"Admin '{current_user.username}' changed owner of video '{video.short_id}' from '{video.owner_username}' to '{new_owner}'")
                         video.owner_username = new_owner
 
         db.session.commit()
@@ -533,25 +530,25 @@ def delete_video():
         main_m3u8 = videos_path / f"{video_filename}.m3u8"
         if main_m3u8.exists():
             main_m3u8.unlink()
-            logger.info(f"Deleted file: {main_m3u8}")
+            current_app.logger.info(f"Deleted file: {main_m3u8}")
 
         # Delete quality-specific files (e.g., video_720p.m3u8, video_720p_001.ts)
         for quality_file in videos_path.glob(f"{video_filename}_*"):
             quality_file.unlink()
-            logger.info(f"Deleted file: {quality_file}")
+            current_app.logger.info(f"Deleted file: {quality_file}")
 
         # Delete thumbnail if exists
         if video.thumbnail:
             thumbnail_path = Path(current_app.config["THUMBNAILS_FOLDER"]) / video.thumbnail
             if thumbnail_path.exists():
                 thumbnail_path.unlink()
-                logger.info(f"Deleted thumbnail: {thumbnail_path}")
+                current_app.logger.info(f"Deleted thumbnail: {thumbnail_path}")
 
     # Delete video record from database
     db.session.delete(video)
     db.session.commit()
 
-    logger.info(f"Admin '{current_user.username}' deleted video '{video_title}' (ID: {short_id})")
+    current_app.logger.info(f"Admin '{current_user.username}' deleted video '{video_title}' (ID: {short_id})")
     flash(f"Video '{video_title}' has been deleted.", "success")
     return redirect(url_for('videos.index'))
 

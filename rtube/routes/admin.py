@@ -1,4 +1,3 @@
-import logging
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -18,8 +17,6 @@ def get_client_ip():
     if request.headers.get('X-Forwarded-For'):
         return request.headers.get('X-Forwarded-For').split(',')[0].strip()
     return request.remote_addr
-
-logger = logging.getLogger(__name__)
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -116,7 +113,7 @@ def change_password():
         # Update password
         current_user.set_password(new_password)
         db.session.commit()
-        logger.info(f"Admin user '{current_user.username}' changed their password")
+        current_app.logger.info(f"Admin user '{current_user.username}' changed their password")
 
         # Audit log
         AuditLog.log(
@@ -161,7 +158,7 @@ def change_user_role(username):
     user.role = new_role
     db.session.commit()
 
-    logger.info(f"Admin '{current_user.username}' changed role of user '{username}' from '{old_role}' to '{new_role}'")
+    current_app.logger.info(f"Admin '{current_user.username}' changed role of user '{username}' from '{old_role}' to '{new_role}'")
 
     # Audit log
     AuditLog.log(
@@ -303,7 +300,7 @@ def import_videos_submit():
 
     if imported_count > 0:
         db.session.commit()
-        logger.info(f"Admin '{current_user.username}' imported {imported_count} orphan video(s) with {thumbnail_count} thumbnail(s) and {preview_count} preview(s)")
+        current_app.logger.info(f"Admin '{current_user.username}' imported {imported_count} orphan video(s) with {thumbnail_count} thumbnail(s) and {preview_count} preview(s)")
 
         # Audit log
         AuditLog.log(
@@ -365,7 +362,7 @@ def regenerate_previews_submit():
 
     if preview_count > 0:
         db.session.commit()
-        logger.info(f"Admin '{current_user.username}' regenerated {preview_count} preview(s)")
+        current_app.logger.info(f"Admin '{current_user.username}' regenerated {preview_count} preview(s)")
 
         # Audit log
         AuditLog.log(
@@ -893,7 +890,7 @@ def create_announcement():
     db.session.add(announcement)
     db.session.commit()
 
-    logger.info(f"Admin '{current_user.username}' created announcement ID {announcement.id}")
+    current_app.logger.info(f"Admin '{current_user.username}' created announcement ID {announcement.id}")
 
     # Audit log
     AuditLog.log(
@@ -919,7 +916,7 @@ def toggle_announcement(announcement_id):
     db.session.commit()
 
     status = 'activated' if announcement.is_active else 'deactivated'
-    logger.info(f"Admin '{current_user.username}' {status} announcement ID {announcement_id}")
+    current_app.logger.info(f"Admin '{current_user.username}' {status} announcement ID {announcement_id}")
 
     # Audit log
     AuditLog.log(
@@ -946,7 +943,7 @@ def delete_announcement(announcement_id):
     db.session.delete(announcement)
     db.session.commit()
 
-    logger.info(f"Admin '{current_user.username}' deleted announcement ID {announcement_id}")
+    current_app.logger.info(f"Admin '{current_user.username}' deleted announcement ID {announcement_id}")
 
     # Audit log
     AuditLog.log(
@@ -991,7 +988,7 @@ def edit_announcement_duration(announcement_id):
 
     db.session.commit()
 
-    logger.info(f"Admin '{current_user.username}' updated duration for announcement ID {announcement_id}")
+    current_app.logger.info(f"Admin '{current_user.username}' updated duration for announcement ID {announcement_id}")
 
     # Audit log
     AuditLog.log(

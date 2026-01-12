@@ -1,4 +1,3 @@
-import logging
 import random
 import re
 import subprocess
@@ -10,8 +9,6 @@ import ffmpeg_streaming
 from ffmpeg_streaming import Formats, Representation, Size, Bitrate
 
 from rtube.models import db, EncodingJob
-
-logger = logging.getLogger(__name__)
 
 QUALITY_PRESETS = {
     "144p": Representation(Size(256, 144), Bitrate(95 * 1024, 64 * 1024)),
@@ -52,7 +49,7 @@ class EncoderService:
             )
             return float(result.stdout.strip())
         except Exception as e:
-            logger.warning(f"Failed to get video duration: {e}")
+            self.app.logger.warning(f"Failed to get video duration: {e}")
             return 0
 
     def _generate_thumbnail(self, input_path: Path, thumbnail_path: Path) -> bool:
@@ -72,10 +69,10 @@ class EncoderService:
                 capture_output=True,
                 check=True
             )
-            logger.info(f"Generated thumbnail at {timestamp:.1f}s: {thumbnail_path}")
+            self.app.logger.info(f"Generated thumbnail at {timestamp:.1f}s: {thumbnail_path}")
             return True
         except Exception as e:
-            logger.warning(f"Failed to generate thumbnail: {e}")
+            self.app.logger.warning(f"Failed to generate thumbnail: {e}")
             return False
 
     def _generate_preview(self, input_path: Path, preview_path: Path, duration: float = 4.0) -> bool:
@@ -94,7 +91,7 @@ class EncoderService:
         try:
             video_duration = self._get_video_duration(input_path)
             if video_duration <= 0:
-                logger.warning("Cannot generate preview: video duration unknown")
+                self.app.logger.warning("Cannot generate preview: video duration unknown")
                 return False
 
             # Pick a start time between 10% and 70% of the video (leave room for duration)
@@ -132,18 +129,18 @@ class EncoderService:
             )
 
             if result.returncode != 0:
-                logger.warning(f"ffmpeg preview error: {result.stderr}")
+                self.app.logger.warning(f"ffmpeg preview error: {result.stderr}")
                 return False
 
             if preview_path.exists() and preview_path.stat().st_size > 0:
-                logger.info(f"Generated preview at {start_time:.1f}s: {preview_path}")
+                self.app.logger.info(f"Generated preview at {start_time:.1f}s: {preview_path}")
                 return True
             else:
-                logger.warning("Preview file not created or empty")
+                self.app.logger.warning("Preview file not created or empty")
                 return False
 
         except Exception as e:
-            logger.warning(f"Failed to generate preview: {e}")
+            self.app.logger.warning(f"Failed to generate preview: {e}")
             return False
 
     def generate_preview_from_hls(self, videos_folder: Path, filename: str, preview_path: Path, duration: float = 4.0) -> bool:
@@ -172,7 +169,7 @@ class EncoderService:
                 qualities.append((quality_num, quality_str))
 
         if not qualities:
-            logger.warning(f"No quality variants found for {filename}")
+            self.app.logger.warning(f"No quality variants found for {filename}")
             return False
 
         # Sort by resolution (ascending) and pick lowest quality for small preview
@@ -184,10 +181,10 @@ class EncoderService:
         ts_files = sorted(videos_folder.glob(ts_pattern))
 
         if not ts_files:
-            logger.warning(f"No .ts segments found matching {ts_pattern}")
+            self.app.logger.warning(f"No .ts segments found matching {ts_pattern}")
             return False
 
-        logger.info(f"Found {len(ts_files)} segments for {filename} at {lowest_quality}")
+        self.app.logger.info(f"Found {len(ts_files)} segments for {filename} at {lowest_quality}")
 
         # Pick segments from middle of video (between 10% and 50%)
         num_segments = len(ts_files)
@@ -235,18 +232,18 @@ class EncoderService:
             concat_file.unlink()
 
             if result.returncode != 0:
-                logger.warning(f"ffmpeg preview error: {result.stderr}")
+                self.app.logger.warning(f"ffmpeg preview error: {result.stderr}")
                 return False
 
             if preview_path.exists() and preview_path.stat().st_size > 0:
-                logger.info(f"Generated preview from HLS segments: {preview_path}")
+                self.app.logger.info(f"Generated preview from HLS segments: {preview_path}")
                 return True
             else:
-                logger.warning("Preview file not created or empty")
+                self.app.logger.warning("Preview file not created or empty")
                 return False
 
         except Exception as e:
-            logger.warning(f"Failed to generate preview from HLS: {e}")
+            self.app.logger.warning(f"Failed to generate preview from HLS: {e}")
             return False
 
     def generate_thumbnail_from_hls(self, videos_folder: Path, filename: str, thumbnail_path: Path) -> bool:
@@ -274,7 +271,7 @@ class EncoderService:
                 qualities.append((quality_num, quality_str))
 
         if not qualities:
-            logger.warning(f"No quality variants found for {filename}")
+            self.app.logger.warning(f"No quality variants found for {filename}")
             return False
 
         # Sort by resolution (descending) and pick the highest quality
@@ -286,10 +283,10 @@ class EncoderService:
         ts_files = sorted(videos_folder.glob(ts_pattern))
 
         if not ts_files:
-            logger.warning(f"No .ts segments found matching {ts_pattern}")
+            self.app.logger.warning(f"No .ts segments found matching {ts_pattern}")
             return False
 
-        logger.info(f"Found {len(ts_files)} segments for {filename} at {best_quality}")
+        self.app.logger.info(f"Found {len(ts_files)} segments for {filename} at {best_quality}")
 
         # Pick a random segment (between 10% and 90% of the video)
         num_segments = len(ts_files)
@@ -301,7 +298,7 @@ class EncoderService:
             selected_idx = 0
 
         selected_ts = ts_files[selected_idx]
-        logger.info(f"Selected segment {selected_ts.name}")
+        self.app.logger.info(f"Selected segment {selected_ts.name}")
 
         # Generate thumbnail from the segment at a random offset
         try:
@@ -325,18 +322,18 @@ class EncoderService:
             )
 
             if result.returncode != 0:
-                logger.warning(f"ffmpeg error: {result.stderr}")
+                self.app.logger.warning(f"ffmpeg error: {result.stderr}")
                 return False
 
             if thumbnail_path.exists() and thumbnail_path.stat().st_size > 0:
-                logger.info(f"Generated thumbnail from {selected_ts.name}: {thumbnail_path}")
+                self.app.logger.info(f"Generated thumbnail from {selected_ts.name}: {thumbnail_path}")
                 return True
             else:
-                logger.warning(f"Thumbnail file not created or empty")
+                self.app.logger.warning(f"Thumbnail file not created or empty")
                 return False
 
         except Exception as e:
-            logger.warning(f"Failed to generate thumbnail from HLS: {e}")
+            self.app.logger.warning(f"Failed to generate thumbnail from HLS: {e}")
             return False
 
     def _encode_worker(self, job_id: int, input_path: Path, output_path: Path, qualities: list[str], delete_original: bool = True, thumbnail_path: Path = None, preview_path: Path = None):
@@ -373,7 +370,7 @@ class EncoderService:
                     progress = min(round(time_ / duration * 100), 100)
                     self._progress[job_id] = {"progress": progress, "status": "encoding", "time_left": int(time_left)}
 
-            logger.info(f"Starting encoding job {job_id}")
+            self.app.logger.info(f"Starting encoding job {job_id}")
             hls.output(str(output_path), monitor=monitor)
 
             with self.app.app_context():
@@ -384,18 +381,18 @@ class EncoderService:
                 db.session.commit()
 
             self._progress[job_id] = {"progress": 100, "status": "completed"}
-            logger.info(f"Encoding job {job_id} completed")
+            self.app.logger.info(f"Encoding job {job_id} completed")
 
             # Delete original MP4 file if requested
             if delete_original and input_path.exists():
                 try:
                     input_path.unlink()
-                    logger.info(f"Deleted original file: {input_path}")
+                    self.app.logger.info(f"Deleted original file: {input_path}")
                 except Exception as e:
-                    logger.warning(f"Failed to delete original file {input_path}: {e}")
+                    self.app.logger.warning(f"Failed to delete original file {input_path}: {e}")
 
         except Exception as e:
-            logger.error(f"Encoding job {job_id} failed: {e}")
+            self.app.logger.error(f"Encoding job {job_id} failed: {e}")
             with self.app.app_context():
                 job = db.session.get(EncodingJob, job_id)
                 job.status = "failed"

@@ -80,35 +80,6 @@ def load_user(user_id):
 
 
 def create_app(test_config=None):
-    dictConfig(
-        {
-            # Specify the logging configuration version
-            "version": 1,
-            "formatters": {
-                # Define a formatter named 'default'
-                "default": {
-                    # Specify log message format
-                    "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
-                }
-            },
-            "handlers": {
-                # Define a console handler configuration
-                "console": {
-                    # Use StreamHandler to log to stdout
-                    "class": "logging.StreamHandler",
-                    "stream": "ext://sys.stdout",
-                    # Use 'default' formatter for this handler
-                    "formatter": "default",
-                }
-            },
-            # Configure the root logger
-            "root": {
-                # Set root logger level to DEBUG
-                "level": "DEBUG",
-                # Attach 'console' handler to the root logger
-                "handlers": ["console"]},
-        }
-    )
     load_dotenv()
 
     # Custom instance path for storing sessions, secret key, etc.
@@ -120,6 +91,22 @@ def create_app(test_config=None):
         app = Flask(__name__, instance_path=instance_path, static_folder=static_folder)
     else:
         app = Flask(__name__)
+
+    # Configure logger
+    gunicorn_logger = logging.getLogger("gunicorn.error")
+    app.logger.handlers.clear()
+
+    # If running under Gunicorn, use its handlers
+    if gunicorn_logger.handlers:
+        app.logger.setLevel(gunicorn_logger.level)
+    else:
+        # Running with Flask dev server - set up a stream handler
+        handler = logging.StreamHandler()
+        handler.setFormatter(
+            logging.Formatter("[%(asctime)s] [%(process)d] [%(levelname)s] in %(module)s: %(message)s")
+        )
+        app.logger.addHandler(handler)
+        app.logger.setLevel(logging.INFO)
 
     # Check if running in test mode (from environment or test_config)
     is_testing = (

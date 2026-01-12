@@ -6,13 +6,10 @@ Supports any OIDC-compliant identity provider (Keycloak, Authentik, Azure AD, Ok
 """
 
 import json
-import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -40,9 +37,7 @@ class OIDCConfig:
         discovery_url = env.get("RTUBE_OIDC_DISCOVERY_URL", "")
 
         if not client_id or not client_secret or not discovery_url:
-            logger.warning(
-                "OIDC enabled but client_id, client_secret, or discovery_url not configured"
-            )
+            # Warning logged by caller with access to app.logger
             return None
 
         scopes_str = env.get("RTUBE_OIDC_SCOPES", "openid profile email")
@@ -99,7 +94,7 @@ def write_client_secrets_file(config: OIDCConfig, instance_path: str, redirect_u
     with open(secrets_path, "w") as f:
         json.dump(secrets, f, indent=2)
 
-    logger.info(f"OIDC client secrets written to {secrets_path}")
+    # Logging handled by configure_flask_oidc which has app context
     return str(secrets_path)
 
 
@@ -136,4 +131,4 @@ def configure_flask_oidc(app, config: OIDCConfig) -> None:
     oidc = OpenIDConnect(app)
     app.config["OIDC_INSTANCE"] = oidc
 
-    logger.info("Flask-OIDC configured successfully")
+    app.logger.info("Flask-OIDC configured successfully")

@@ -1,5 +1,4 @@
 import json
-import logging
 from functools import wraps
 from pathlib import Path
 from flask import Blueprint, render_template, request, redirect, url_for, current_app, Response, abort
@@ -7,8 +6,6 @@ from flask_login import login_required, current_user
 
 from rtube.models import db, Video, EncodingJob
 from rtube.services.encoder import encoder_service
-
-logger = logging.getLogger(__name__)
 
 encoding_bp = Blueprint('encoding', __name__, url_prefix='/encode')
 
