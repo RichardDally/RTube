@@ -319,8 +319,15 @@ def create_app(test_config=None):
         result = url_pattern.sub(replace_url, text)
         return Markup(result)
 
-    if __name__ != '__main__':
-        gunicorn_logger = logging.getLogger('gunicorn.error')
+    # Configure logging for gunicorn
+    # When running under gunicorn, propagate its handlers to root logger
+    # so all module loggers (logging.getLogger(__name__)) also output properly
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    if gunicorn_logger.handlers:
+        # Running under gunicorn - use its handlers for all loggers
+        root_logger = logging.getLogger()
+        root_logger.handlers = gunicorn_logger.handlers
+        root_logger.setLevel(gunicorn_logger.level)
         app.logger.handlers = gunicorn_logger.handlers
         app.logger.setLevel(gunicorn_logger.level)
 
