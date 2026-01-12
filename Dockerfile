@@ -2,7 +2,6 @@ FROM ubuntu:latest
 
 ARG USERNAME=richard
 ARG PYTHON_VERSION=3.14
-ARG FFMPEG_VERSION=7.1
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PATH="/home/${USERNAME}/.local/bin:/home/${USERNAME}/venv/bin:$PATH" \
@@ -12,10 +11,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt-get install -y curl ca-certificates xz-utils \
     && curl -fsSL https://deb.nodesource.com/setup_current.x | bash - \
     && apt-get install -y nodejs \
-    && curl -fsSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-${FFMPEG_VERSION}-amd64-static.tar.xz -o /tmp/ffmpeg.tar.xz \
+    && curl -fsSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o /tmp/ffmpeg.tar.xz \
     && tar -xf /tmp/ffmpeg.tar.xz -C /tmp \
-    && mv /tmp/ffmpeg-${FFMPEG_VERSION}-amd64-static/ffmpeg /usr/local/bin/ \
-    && mv /tmp/ffmpeg-${FFMPEG_VERSION}-amd64-static/ffprobe /usr/local/bin/ \
+    && mv /tmp/ffmpeg-release-amd64-static/ffmpeg /usr/local/bin/ \
+    && mv /tmp/ffmpeg-release-amd64-static/ffprobe /usr/local/bin/ \
     && rm -rf /tmp/ffmpeg* \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m -s /bin/bash ${USERNAME}
