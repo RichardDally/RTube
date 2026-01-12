@@ -51,6 +51,20 @@ class Video(db.Model):
 
     def increment_views(self):
         self.view_count += 1
+        # Record view event for analytics
+        view = VideoView(video_id=self.id)
+        db.session.add(view)
+
+
+class VideoView(db.Model):
+    """Track individual video views for analytics."""
+    __tablename__ = "video_views"
+
+    id = db.Column(db.Integer, primary_key=True)
+    video_id = db.Column(db.Integer, db.ForeignKey("videos.id"), nullable=False)
+    viewed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    video = db.relationship("Video", backref=db.backref("views", lazy=True))
 
 
 class EncodingJob(db.Model):

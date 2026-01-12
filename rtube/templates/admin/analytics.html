@@ -398,7 +398,7 @@
             <!-- Activity Chart -->
             <div class="panel">
                 <div class="panel-header">
-                    <h2>Activity</h2>
+                    <h2>Activity <span style="font-size: 14px; color: #aaa; font-weight: normal; margin-left: 10px;">{{ "{:,}".format(total_views) }} total views</span></h2>
                     <div class="period-selector">
                         <button onclick="changePeriod('30d')" class="{{ 'active' if current_period == '30d' else '' }}">30 Days</button>
                         <button onclick="changePeriod('6m')" class="{{ 'active' if current_period == '6m' else '' }}">6 Months</button>
@@ -635,6 +635,14 @@
                 data: {
                     labels: {{ chart_labels | tojson }},
                     datasets: [
+                        {
+                            label: 'Views',
+                            data: {{ chart_views | tojson }},
+                            borderColor: '#E57373',
+                            backgroundColor: 'rgba(229, 115, 115, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                        },
                         {
                             label: 'Videos',
                             data: {{ chart_videos | tojson }},

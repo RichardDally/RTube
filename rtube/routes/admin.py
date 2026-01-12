@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, abort, request, redirect, url_for,
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
-from rtube.models import db, Video, VideoVisibility, Comment, Playlist, Favorite, EncodingJob, WatchHistory, AuditLog, Announcement
+from rtube.models import db, Video, VideoVisibility, VideoView, Comment, Playlist, Favorite, EncodingJob, WatchHistory, AuditLog, Announcement
 from rtube.models_auth import User, UserRole
 
 
@@ -503,15 +503,27 @@ def analytics():
         func.date(User.created_at)
     ).order_by('date').all()
 
+    # Views per day
+    views_by_day = db.session.query(
+        func.date(VideoView.viewed_at).label('date'),
+        func.count(VideoView.id).label('count')
+    ).filter(
+        VideoView.viewed_at >= period_start
+    ).group_by(
+        func.date(VideoView.viewed_at)
+    ).order_by('date').all()
+
     # Build chart data (fill in missing days with 0)
     chart_labels = []
     chart_videos = []
     chart_comments = []
     chart_users = []
+    chart_views = []
 
     videos_dict = {str(row.date): row.count for row in videos_by_day}
     comments_dict = {str(row.date): row.count for row in comments_by_day}
     users_dict = {str(row.date): row.count for row in users_by_day}
+    views_dict = {str(row.date): row.count for row in views_by_day}
 
     # Determine label format based on period length
     if period_days <= 60:
@@ -528,6 +540,7 @@ def analytics():
         chart_videos.append(videos_dict.get(day_str, 0))
         chart_comments.append(comments_dict.get(day_str, 0))
         chart_users.append(users_dict.get(day_str, 0))
+        chart_views.append(views_dict.get(day_str, 0))
 
     # === User Stats ===
     # Top uploaders
@@ -609,6 +622,7 @@ def analytics():
         chart_videos=chart_videos,
         chart_comments=chart_comments,
         chart_users=chart_users,
+        chart_views=chart_views,
         top_uploaders=top_uploaders,
         top_commenters=top_commenters,
         role_stats=role_stats,
