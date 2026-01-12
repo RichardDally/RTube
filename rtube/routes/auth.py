@@ -132,6 +132,11 @@ def login():
             login_user(user)
             current_app.logger.info(f"User '{username}' logged in successfully")
 
+            # Warn admin user if still using default password
+            if user.username == "admin" and user.has_default_password():
+                flash("Warning: You are using the default admin password. Please change it immediately in your profile settings.", "warning")
+                current_app.logger.warning("Admin user logged in with default password")
+
             next_page = request.args.get('next')
             if next_page:
                 return redirect(next_page)

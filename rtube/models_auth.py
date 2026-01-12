@@ -49,6 +49,16 @@ class User(UserMixin, db.Model):
         except VerifyMismatchError:
             return False
 
+    def has_default_password(self) -> bool:
+        """Check if the user still has the default 'admin' password."""
+        if not self.password_hash:
+            return False
+        try:
+            ph.verify(self.password_hash, "admin")
+            return True
+        except VerifyMismatchError:
+            return False
+
     def is_admin(self) -> bool:
         return self.role == UserRole.ADMIN.value
 
