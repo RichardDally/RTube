@@ -82,31 +82,32 @@ def load_user(user_id):
 def create_app(test_config=None):
     dictConfig(
         {
-            # Specify the logging configuration version
             "version": 1,
+            "disable_existing_loggers": False,  # Keep existing loggers
             "formatters": {
-                # Define a formatter named 'default'
                 "default": {
-                    # Specify log message format
-                    "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
+                    "format": "[%(asctime)s] %(levelname)s in %(name)s: %(message)s",
                 }
             },
             "handlers": {
-                # Define a console handler configuration
                 "console": {
-                    # Use StreamHandler to log to stdout
                     "class": "logging.StreamHandler",
                     "stream": "ext://sys.stdout",
-                    # Use 'default' formatter for this handler
                     "formatter": "default",
                 }
             },
-            # Configure the root logger
             "root": {
-                # Set root logger level to DEBUG
-                "level": "DEBUG",
-                # Attach 'console' handler to the root logger
-                "handlers": ["console"]},
+                "level": "INFO",
+                "handlers": ["console"]
+            },
+            # Propagate all module loggers to root
+            "loggers": {
+                "rtube": {"level": "DEBUG", "propagate": True},
+                "flask": {"level": "INFO", "propagate": True},
+                "werkzeug": {"level": "INFO", "propagate": True},
+                "gunicorn": {"level": "INFO", "propagate": True},
+                "gunicorn.access": {"level": "INFO", "propagate": True},
+            }
         }
     )
     load_dotenv()
