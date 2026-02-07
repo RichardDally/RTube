@@ -727,6 +727,11 @@ def videos_bulk_action():
                 Favorite.query.filter_by(video_id=video.id).delete()
                 WatchHistory.query.filter_by(video_id=video.id).delete()
                 EncodingJob.query.filter_by(video_id=video.id).delete()
+                
+                # Delete video views
+                # Import kept inside function to avoid circular imports if any, or just for safety
+                from rtube.models import VideoView
+                VideoView.query.filter_by(video_id=video.id).delete()
 
                 # Delete from playlists
                 from rtube.models import PlaylistVideo

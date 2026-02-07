@@ -279,13 +279,17 @@ def create_app(test_config=None):
         import rtube
         from rtube.models import Announcement
 
-        # Get active, non-expired announcement (most recent)
-        active_announcement = Announcement.query.filter(
-            Announcement.is_active == True
-        ).order_by(Announcement.created_at.desc()).first()
+        try:
+            # Get active, non-expired announcement (most recent)
+            active_announcement = Announcement.query.filter(
+                Announcement.is_active == True
+            ).order_by(Announcement.created_at.desc()).first()
 
-        # Filter out expired announcements
-        if active_announcement and active_announcement.is_expired():
+            # Filter out expired announcements
+            if active_announcement and active_announcement.is_expired():
+                active_announcement = None
+        except Exception:
+            # If DB is down or other error, fail gracefully so 500 page can render
             active_announcement = None
 
         return {
