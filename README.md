@@ -542,7 +542,28 @@ git push origin v0.3.0
 6. **Create GitHub Release**: Creates a release with the built artifacts (only after PyPI and Docker Hub publish succeed)
 7. **Rollback on failure**: Logs errors and provides guidance if any step fails
 
+
 ### Git LFS side note
 * Download and install [Git Large File Storage](https://git-lfs.github.com/)
 * Track mp4 files `$ git lfs track "*.mp4"`
 * `git add/commit/push` will upload on GitHub LFS.
+
+## Kubernetes Configuration
+
+If you are deploying RTube on Kubernetes with an Nginx Ingress Controller, you must increase the maximum upload size to match the application's limit (16GB). By default, Nginx limits uploads to 1MB.
+
+### Ingress Annotation
+
+Add the `proxy-body-size` annotation to your Ingress resource:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rtube-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "16g"
+spec:
+  # ... rest of your ingress config
+```
+
