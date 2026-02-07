@@ -74,7 +74,7 @@ Then open http://127.0.0.1:5000 in your browser.
 - Keyboard shortcuts (hotkeys)
 - Video markers support
 - Timestamp sharing via URL parameter (`?t=120` for 2 minutes)
-- Theater mode (wider view, press `T` or click button) - preference saved
+
 
 ### Video Management
 
