@@ -526,6 +526,11 @@ def delete_video():
     # Delete associated watch history
     WatchHistory.query.filter_by(video_id=video.id).delete()
 
+    # Delete associated video views
+    # Import kept inside function to avoid circular imports if any, or just for safety
+    from rtube.models import VideoView
+    VideoView.query.filter_by(video_id=video.id).delete()
+
     # Delete video files from disk
     videos_path = Path(current_app.config["VIDEOS_FOLDER"])
     if videos_path.exists():
