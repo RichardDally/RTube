@@ -1,259 +1,311 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="utf-8">
-        <title>RTube - Encoding in progress</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                max-width: 600px;
-                margin: 0 auto;
-                padding: 20px;
-                background-color: #1a1a1a;
-                color: #fff;
-            }
-            h1 {
-                margin-bottom: 10px;
-            }
-            .video-title {
-                color: #888;
-                margin-bottom: 30px;
-            }
-            .progress-container {
-                background-color: #2a2a2a;
-                border-radius: 10px;
-                padding: 30px;
-                margin-bottom: 20px;
-            }
-            .progress-bar-wrapper {
-                background-color: #444;
-                border-radius: 5px;
-                height: 30px;
-                overflow: hidden;
-                margin-bottom: 15px;
-            }
-            .progress-bar {
-                background: linear-gradient(90deg, #4CAF50, #8BC34A);
-                height: 100%;
-                width: 0%;
-                transition: width 0.3s ease;
-                border-radius: 5px;
-            }
-            .progress-text {
-                text-align: center;
-                font-size: 24px;
-                font-weight: bold;
-            }
-            .status-info {
-                display: flex;
-                justify-content: space-between;
-                color: #888;
-                margin-top: 15px;
-            }
-            .status-badge {
-                display: inline-block;
-                padding: 5px 15px;
-                border-radius: 20px;
-                font-size: 14px;
-                text-transform: uppercase;
-            }
-            .status-pending {
-                background-color: #666;
-            }
-            .status-encoding {
-                background-color: #2196F3;
-            }
-            .status-completed {
-                background-color: #4CAF50;
-            }
-            .status-failed {
-                background-color: #f44336;
-            }
-            .qualities-list {
-                margin-top: 20px;
-                padding: 15px;
-                background-color: #2a2a2a;
-                border-radius: 5px;
-            }
-            .qualities-list h3 {
-                margin-top: 0;
-                margin-bottom: 10px;
-            }
-            .quality-badge {
-                display: inline-block;
-                padding: 5px 10px;
-                margin: 2px;
-                background-color: #444;
-                border-radius: 3px;
-                font-size: 12px;
-            }
-            .actions {
-                margin-top: 30px;
-                display: flex;
-                gap: 15px;
-            }
-            .btn {
-                flex: 1;
-                padding: 15px;
-                border: none;
-                border-radius: 5px;
-                font-size: 16px;
-                cursor: pointer;
-                text-decoration: none;
-                text-align: center;
-                transition: opacity 0.2s;
-            }
-            .btn:hover {
-                opacity: 0.8;
-            }
-            .btn-primary {
-                background-color: #4CAF50;
-                color: white;
-            }
-            .btn-secondary {
-                background-color: #444;
-                color: white;
-            }
-            .hidden {
-                display: none;
-            }
-            .error-message {
-                background-color: #ff4444;
-                color: white;
-                padding: 15px;
-                border-radius: 5px;
-                margin-top: 20px;
-            }
-            .spinner {
-                display: inline-block;
-                width: 20px;
-                height: 20px;
-                border: 3px solid #fff;
-                border-top-color: transparent;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-                margin-right: 10px;
-                vertical-align: middle;
-            }
-            @keyframes spin {
-                to { transform: rotate(360deg); }
-            }
-        </style>
-    </head>
-    <body>
-        <h1>Encoding</h1>
-        <p class="video-title">{{ job.video.title }}</p>
 
-        <div class="progress-container">
-            <div class="progress-bar-wrapper">
-                <div class="progress-bar" id="progress-bar"></div>
-            </div>
-            <div class="progress-text">
-                <span id="progress-percent">{{ job.progress }}</span>%
-            </div>
-            <div class="status-info">
-                <span>
-                    <span class="status-badge status-{{ job.status }}" id="status-badge">
-                        <span class="spinner" id="spinner"></span>
-                        <span id="status-text">{{ job.status }}</span>
-                    </span>
+<head>
+    <meta charset="utf-8">
+    <title>RTube - Encoding in progress</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        .video-title {
+            color: #888;
+            margin-bottom: 30px;
+        }
+
+        .progress-container {
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar-wrapper {
+            background-color: #444;
+            border-radius: 5px;
+            height: 30px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 5px;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .status-info {
+            display: flex;
+            justify-content: space-between;
+            color: #888;
+            margin-top: 15px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background-color: #666;
+        }
+
+        .status-encoding {
+            background-color: #2196F3;
+        }
+
+        .status-completed {
+            background-color: #4CAF50;
+        }
+
+        .status-failed {
+            background-color: #f44336;
+        }
+
+        .qualities-list {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #2a2a2a;
+            border-radius: 5px;
+        }
+
+        .qualities-list h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .quality-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 2px;
+            background-color: #444;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .actions {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #444;
+            color: white;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error-message {
+            background-color: #ff4444;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .checkmark {
+            display: inline-block;
+            color: #fff;
+            font-size: 18px;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Encoding</h1>
+    <p class="video-title">{{ job.video.title }}</p>
+
+    <div class="progress-container">
+        <div class="progress-bar-wrapper">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="progress-text">
+            <span id="progress-percent">{{ job.progress }}</span>%
+        </div>
+        <div class="status-info">
+            <span>
+                <span class="status-badge status-{{ job.status }}" id="status-badge">
+                    <span class="spinner" id="spinner"></span>
+                    <span class="checkmark hidden" id="checkmark">✓</span>
+                    <span id="status-text">{{ job.status }}</span>
                 </span>
-                <span id="time-left"></span>
-            </div>
+            </span>
+            <span id="time-left"></span>
         </div>
+    </div>
 
-        <div class="qualities-list">
-            <h3>Qualities</h3>
-            {% for quality in job.qualities.split(',') %}
-            <span class="quality-badge">{{ quality }}</span>
-            {% endfor %}
-        </div>
+    <div class="qualities-list">
+        <h3>Qualities</h3>
+        {% for quality in job.qualities.split(',') %}
+        <span class="quality-badge">{{ quality }}</span>
+        {% endfor %}
+    </div>
 
-        <div class="error-message hidden" id="error-message"></div>
+    <div class="error-message hidden" id="error-message"></div>
 
-        <div class="actions">
-            <a href="/encode/status/" class="btn btn-secondary">All encoding jobs</a>
-            <a href="/encode" class="btn btn-secondary">Encode another video</a>
-            <a href="/watch/{{ job.video.short_id }}" class="btn btn-primary hidden" id="watch-btn">Watch video</a>
-        </div>
+    <div class="actions">
+        <a href="/encode/status/" class="btn btn-secondary">All encoding jobs</a>
+        <a href="/encode" class="btn btn-secondary">Encode another video</a>
+        <a href="/watch/{{ job.video.short_id }}" class="btn btn-primary hidden" id="watch-btn">Watch video</a>
+    </div>
 
-        <script>
-            const jobId = {{ job.id }};
-            const progressBar = document.getElementById('progress-bar');
-            const progressPercent = document.getElementById('progress-percent');
-            const statusBadge = document.getElementById('status-badge');
-            const statusText = document.getElementById('status-text');
-            const timeLeft = document.getElementById('time-left');
-            const spinner = document.getElementById('spinner');
-            const watchBtn = document.getElementById('watch-btn');
-            const errorMessage = document.getElementById('error-message');
+    <script>
+        const jobId = {{ job.id }};
+        const progressBar = document.getElementById('progress-bar');
+        const progressPercent = document.getElementById('progress-percent');
+        const statusBadge = document.getElementById('status-badge');
+        const statusText = document.getElementById('status-text');
+        const timeLeft = document.getElementById('time-left');
+        const spinner = document.getElementById('spinner');
+        const checkmark = document.getElementById('checkmark');
+        const watchBtn = document.getElementById('watch-btn');
+        const errorMessage = document.getElementById('error-message');
 
-            function formatTime(seconds) {
-                if (seconds < 60) return seconds + 's';
-                if (seconds < 3600) return Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
-                return Math.floor(seconds / 3600) + 'h ' + Math.floor((seconds % 3600) / 60) + 'm';
+        function formatTime(seconds) {
+            if (seconds < 60) return seconds + 's';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
+            return Math.floor(seconds / 3600) + 'h ' + Math.floor((seconds % 3600) / 60) + 'm';
+        }
+
+        function updateStatus(data) {
+            progressBar.style.width = data.progress + '%';
+            progressPercent.textContent = data.progress;
+
+            statusBadge.className = 'status-badge status-' + data.status;
+            statusText.textContent = data.status;
+
+            if (data.time_left !== undefined) {
+                timeLeft.textContent = 'Time remaining: ' + formatTime(data.time_left);
             }
 
-            function updateStatus(data) {
-                progressBar.style.width = data.progress + '%';
-                progressPercent.textContent = data.progress;
-
-                statusBadge.className = 'status-badge status-' + data.status;
-                statusText.textContent = data.status;
-
-                if (data.time_left !== undefined) {
-                    timeLeft.textContent = 'Time remaining: ' + formatTime(data.time_left);
+            if (data.status === 'completed') {
+                spinner.classList.add('hidden');
+                checkmark.classList.remove('hidden');
+                watchBtn.classList.remove('hidden');
+                timeLeft.textContent = 'Done!';
+            } else if (data.status === 'failed') {
+                spinner.classList.add('hidden');
+                checkmark.classList.add('hidden');
+                if (data.error) {
+                    errorMessage.textContent = 'Error: ' + data.error;
+                    errorMessage.classList.remove('hidden');
                 }
-
-                if (data.status === 'completed') {
-                    spinner.classList.add('hidden');
-                    watchBtn.classList.remove('hidden');
-                    timeLeft.textContent = 'Done!';
-                } else if (data.status === 'failed') {
-                    spinner.classList.add('hidden');
-                    if (data.error) {
-                        errorMessage.textContent = 'Error: ' + data.error;
-                        errorMessage.classList.remove('hidden');
-                    }
-                } else if (data.status === 'pending') {
-                    spinner.classList.add('hidden');
-                } else if (data.status === 'encoding') {
-                    spinner.classList.remove('hidden');
-                }
+            } else if (data.status === 'pending') {
+                spinner.classList.add('hidden');
+                checkmark.classList.add('hidden');
+            } else if (data.status === 'encoding') {
+                spinner.classList.remove('hidden');
+                checkmark.classList.add('hidden');
             }
+        }
 
-            // Initial state
-            {% if job.status in ('completed', 'failed', 'pending') %}
-            spinner.classList.add('hidden');
-            {% endif %}
-            updateStatus({
-                progress: {{ job.progress }},
-                status: '{{ job.status }}'
+        // Initial state
+        {% if job.status in ('completed', 'failed', 'pending') %}
+        spinner.classList.add('hidden');
+        {% endif %}
+        {% if job.status != 'completed' %}
+        checkmark.classList.add('hidden');
+        {% else %}
+        checkmark.classList.remove('hidden');
+        {% endif %}
+        updateStatus({
+            progress: {{ job.progress }},
+            status: '{{ job.status }}'
             });
 
-            {% if job.status not in ('completed', 'failed') %}
-            // Server-Sent Events for real-time updates
-            const eventSource = new EventSource('/encode/progress/' + jobId);
+        {% if job.status not in ('completed', 'failed') %}
+        // Server-Sent Events for real-time updates
+        const eventSource = new EventSource('/encode/progress/' + jobId);
 
-            eventSource.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                updateStatus(data);
+        eventSource.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            updateStatus(data);
 
-                if (data.status === 'completed' || data.status === 'failed') {
-                    eventSource.close();
-                }
-            };
-
-            eventSource.onerror = function() {
-                console.error('SSE connection error');
+            if (data.status === 'completed' || data.status === 'failed') {
                 eventSource.close();
-            };
-            {% else %}
-            // Job already finished
-            {% if job.status == 'completed' %}
-            watchBtn.classList.remove('hidden');
-            {% endif %}
-            {% endif %}
-        </script>
-    </body>
+            }
+        };
+
+        eventSource.onerror = function () {
+            console.error('SSE connection error');
+            eventSource.close();
+        };
+        {% else %}
+        // Job already finished
+        {% if job.status == 'completed' %}
+        watchBtn.classList.remove('hidden');
+        {% endif %}
+        {% endif %}
+    </script>
+</body>
+
 </html>
