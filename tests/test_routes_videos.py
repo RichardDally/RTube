@@ -613,7 +613,7 @@ class TestDeleteVideoRoute:
 
         response = admin_client.get(f'/watch?v={sample_video["short_id"]}')
         assert response.status_code == 200
-        assert b'Delete Video' in response.data
+        assert b'class="btn-delete-video"' in response.data
 
         # Cleanup
         if os.path.exists(m3u8_path):
@@ -643,7 +643,7 @@ class TestDeleteVideoRoute:
 
         response = authenticated_client.get(f'/watch?v={short_id}')
         assert response.status_code == 200
-        assert b'Delete Video' not in response.data
+        assert b'class="btn-delete-video"' not in response.data
 
         # Cleanup
         if os.path.exists(m3u8_path):
@@ -673,7 +673,7 @@ class TestDeleteVideoRoute:
 
         response = authenticated_client.get(f'/watch?v={short_id}')
         assert response.status_code == 200
-        assert b'Delete Video' in response.data
+        assert b'class="btn-delete-video"' in response.data
 
         # Cleanup
         if os.path.exists(m3u8_path):
