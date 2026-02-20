@@ -24,6 +24,7 @@ dependencies = [
     "python-ffmpeg-video-streaming==0.1.14",
     "python-dotenv>=1.2.1",
     "gunicorn>=23.0.0",
+    "httpx>=0.28.1",
 ]
 
 [project.urls]

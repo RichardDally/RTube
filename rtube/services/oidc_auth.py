@@ -8,6 +8,7 @@ Supports any OIDC-compliant identity provider (Keycloak, Authentik, Azure AD, Ok
 import json
 import logging
 import os
+import httpx
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -68,14 +69,32 @@ def generate_client_secrets(config: OIDCConfig, redirect_uri: str) -> dict[str, 
     Returns:
         Dictionary structure compatible with Flask-OIDC client_secrets.
     """
+    try:
+        # Use a short timeout so app startup doesn't hang indefinitely
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get(config.discovery_url)
+            response.raise_for_status()
+            discovery_doc = response.json()
+    except Exception as e:
+        logger.error(f"Failed to fetch OIDC discovery document from {config.discovery_url}: {e}")
+        raise RuntimeError(f"Could not load OIDC provider configuration: {e}")
+
+    auth_uri = discovery_doc.get("authorization_endpoint")
+    token_uri = discovery_doc.get("token_endpoint")
+    userinfo_uri = discovery_doc.get("userinfo_endpoint")
+    issuer = discovery_doc.get("issuer")
+
+    if not all([auth_uri, token_uri, userinfo_uri, issuer]):
+        logger.warning("Discovery document is missing required endpoints. OIDC login may fail.")
+
     return {
         "web": {
             "client_id": config.client_id,
             "client_secret": config.client_secret,
-            "auth_uri": f"{config.discovery_url.replace('/.well-known/openid-configuration', '')}/protocol/openid-connect/auth",
-            "token_uri": f"{config.discovery_url.replace('/.well-known/openid-configuration', '')}/protocol/openid-connect/token",
-            "userinfo_uri": f"{config.discovery_url.replace('/.well-known/openid-configuration', '')}/protocol/openid-connect/userinfo",
-            "issuer": config.discovery_url.replace("/.well-known/openid-configuration", ""),
+            "auth_uri": auth_uri,
+            "token_uri": token_uri,
+            "userinfo_uri": userinfo_uri,
+            "issuer": issuer,
             "redirect_uris": [redirect_uri],
         }
     }
