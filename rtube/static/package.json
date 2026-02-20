@@ -4,12 +4,12 @@
   "description": "",
   "dependencies": {
     "@videojs/http-streaming": "^2.13.1",
-    "video.js": "^7.17.0",
-    "videojs-contrib-quality-levels": "^2.1.0",
-    "videojs-hotkeys": "^0.2.27",
+    "jquery": "^3.7.1",
+    "video.js": "^7.21.7",
+    "videojs-contrib-quality-levels": "^2.2.1",
     "videojs-hls-quality-selector": "^1.1.4",
-    "videojs-markers": "^1.0.1",
-    "jquery": "^3.6.0"
+    "videojs-hotkeys": "^0.2.30",
+    "videojs-markers": "^1.0.1"
   },
   "main": "video-player.js",
   "scripts": {
