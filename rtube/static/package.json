@@ -17,5 +17,10 @@
   },
   "keywords": [],
   "author": "Richard Dally",
-  "license": "ISC"
+  "license": "ISC",
+  "overrides": {
+    "minimatch": "^10.2.1",
+    "rimraf": "^6.0.0",
+    "glob": "^11.0.0"
+  }
 }
