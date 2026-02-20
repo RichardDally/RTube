@@ -1,7 +1,7 @@
 # ==========================================
 # Build Stage
 # ==========================================
-FROM ubuntu:24.04 AS builder
+FROM ubuntu:26.04 AS builder
 
 ARG USERNAME=richard
 ARG PYTHON_VERSION=3.14
@@ -45,7 +45,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
 # ==========================================
 # Target Stage
 # ==========================================
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 ARG USERNAME=richard
 
