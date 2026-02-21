@@ -41,6 +41,8 @@ rtube = [
     "static/js/*.js",
     "static/package.json",
     "static/package-lock.json",
+    "static/favicon.ico",
+    "static/favicon.png",
 ]
 
 [dependency-groups]

@@ -124,7 +124,10 @@
                 color: #ff6b6b;
             }
         </style>
-    </head>
+        <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+
+</head>
     <body>
         <div class="header">
             <a href="{{ url_for('videos.watch_video', v=video.short_id) }}" class="back-link">&larr; Back to Video</a>

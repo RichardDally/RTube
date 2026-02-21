@@ -104,7 +104,10 @@
                 color: #ff4444;
             }
         </style>
-    </head>
+        <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+
+</head>
     <body>
         <div class="header">
             <a href="{{ url_for('playlists.view', playlist_id=playlist.id) }}" class="back-link">&larr; Back to Playlist</a>
