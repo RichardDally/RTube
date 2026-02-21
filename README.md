@@ -72,6 +72,7 @@ Then open http://127.0.0.1:5000 in your browser.
 
 - HLS streaming with adaptive quality selection
 - Keyboard shortcuts (hotkeys)
+- Video chapters support (jump to specific sections)
 - Video markers support
 - Timestamp sharing via URL parameter (`?t=120` for 2 minutes)
 
@@ -81,6 +82,7 @@ Then open http://127.0.0.1:5000 in your browser.
 - Upload and encode videos to HLS format
 - Video visibility (public/private)
 - Video deletion by owner or admin
+- Manage chapters (add, edit, delete) for own videos or as admin
 - Thumbnail generation
 - Video preview on hover (WebM clips)
 - View count tracking
