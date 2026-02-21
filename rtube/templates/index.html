@@ -1040,6 +1040,81 @@
             </div>
 
             {% if video %}
+            <div class="chapters-section"
+                style="width: 100%; max-width: 1280px; margin-top: 30px; font-family: Arial, sans-serif;">
+                <h3 class="comments-title">Chapters</h3>
+
+                {% if video.chapters %}
+                <ul class="chapters-list" style="list-style: none; padding: 0; margin: 0 0 15px 0;">
+                    {% for chapter in video.chapters %}
+                    <li
+                        style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px; background-color: #2a2a2a; padding: 10px; border-radius: 4px;">
+                        <a href="{{ url_for('videos.watch_video', v=video.short_id, t=chapter.start_time) }}"
+                            onclick="if(typeof player !== 'undefined') { player.currentTime({{ chapter.start_time }}); player.play(); window.history.pushState({}, '', this.href); event.preventDefault(); }"
+                            style="color: #4CAF50; text-decoration: none; font-family: monospace; font-size: 14px; background-color: #1a1a1a; padding: 4px 8px; border-radius: 3px;">
+                            {{ chapter.formatted_time() }}
+                        </a>
+                        <span style="color: #ddd; font-size: 14px;">{{ chapter.title }}</span>
+
+                        {% if current_user.is_authenticated and (current_user.is_admin() or video.owner_username ==
+                        current_user.username) %}
+                        <div class="chapter-actions" style="margin-left: auto;">
+                            <button type="button" class="btn-edit"
+                                onclick="toggleChapterEdit({{ chapter.id }})">Edit</button>
+                            <form method="post" action="{{ url_for('videos.delete_chapter', v=video.short_id) }}"
+                                style="display: inline;">
+                                <input type="hidden" name="chapter_id" value="{{ chapter.id }}">
+                                <button type="submit" class="btn-delete"
+                                    onclick="return confirm('Delete this chapter?')">Delete</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </li>
+
+                    {% if current_user.is_authenticated and (current_user.is_admin() or video.owner_username ==
+                    current_user.username) %}
+                    <li id="edit-chapter-form-{{ chapter.id }}"
+                        style="display: none; padding: 10px; background-color: #333; border-radius: 4px; margin-bottom: 10px;">
+                        <form method="post" action="{{ url_for('videos.edit_chapter', v=video.short_id) }}"
+                            style="display: flex; gap: 10px; align-items: center;">
+                            <input type="hidden" name="chapter_id" value="{{ chapter.id }}">
+                            <input type="text" name="time" value="{{ chapter.formatted_time() }}" placeholder="MM:SS"
+                                required
+                                style="width: 80px; padding: 6px; border-radius: 4px; border: 1px solid #444; background: #2a2a2a; color: white;">
+                            <input type="text" name="title" value="{{ chapter.title }}" placeholder="Chapter title"
+                                required
+                                style="flex: 1; padding: 6px; border-radius: 4px; border: 1px solid #444; background: #2a2a2a; color: white;">
+                            <button type="submit" class="btn-save">Save</button>
+                            <button type="button" class="btn-cancel"
+                                onclick="toggleChapterEdit({{ chapter.id }})">Cancel</button>
+                        </form>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p style="color: #888; font-style: italic; margin-bottom: 15px; font-size: 14px;">No chapters yet.</p>
+                {% endif %}
+
+                {% if current_user.is_authenticated and (current_user.is_admin() or video.owner_username ==
+                current_user.username) %}
+                <button type="button" class="btn-comment" style="padding: 6px 12px; font-size: 13px;"
+                    onclick="toggleChapterAdd()">+ Add Chapter</button>
+                <div id="add-chapter-form"
+                    style="display: none; padding: 10px; background-color: #2a2a2a; border-radius: 4px; margin-top: 10px;">
+                    <form method="post" action="{{ url_for('videos.add_chapter', v=video.short_id) }}"
+                        style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" name="time" placeholder="MM:SS" required
+                            style="width: 80px; padding: 6px; border-radius: 4px; border: 1px solid #444; background: #333; color: white;">
+                        <input type="text" name="title" placeholder="Chapter title" required
+                            style="flex: 1; padding: 6px; border-radius: 4px; border: 1px solid #444; background: #333; color: white;">
+                        <button type="submit" class="btn-save">Add</button>
+                        <button type="button" class="btn-cancel" onclick="toggleChapterAdd()">Cancel</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+
             <div class="comments-section">
                 <div class="comments-header">
                     <h3 class="comments-title">{{ video.comments | selectattr('parent_id', 'none') | list | length }}
@@ -1228,6 +1303,20 @@
             commentContent.addEventListener('input', function () {
                 charCount.textContent = this.value.length;
             });
+        }
+
+        function toggleChapterEdit(chapterId) {
+            const editForm = document.getElementById('edit-chapter-form-' + chapterId);
+            if (editForm) {
+                editForm.style.display = editForm.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        function toggleChapterAdd() {
+            const addForm = document.getElementById('add-chapter-form');
+            if (addForm) {
+                addForm.style.display = addForm.style.display === 'none' ? 'block' : 'none';
+            }
         }
 
         function toggleEditForm(commentId) {

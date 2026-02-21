@@ -67,6 +67,26 @@ class VideoView(db.Model):
     video = db.relationship("Video", backref=db.backref("views", lazy=True))
 
 
+class VideoChapter(db.Model):
+    __tablename__ = "video_chapters"
+
+    id = db.Column(db.Integer, primary_key=True)
+    video_id = db.Column(db.Integer, db.ForeignKey("videos.id"), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    start_time = db.Column(db.Integer, nullable=False)  # in seconds
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    video = db.relationship("Video", backref=db.backref("chapters", lazy=True, order_by="VideoChapter.start_time.asc()"))
+
+    def formatted_time(self) -> str:
+        """Format start_time (seconds) as HH:MM:SS or MM:SS."""
+        hours, remainder = divmod(self.start_time, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        if hours > 0:
+            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        return f"{minutes:02d}:{seconds:02d}"
+
+
 class EncodingJob(db.Model):
     __tablename__ = "encoding_jobs"
 

@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, current_app, flash, redirect, url_
 from flask_login import current_user, login_required
 
 from datetime import datetime, timedelta
-from rtube.models import db, Video, VideoVisibility, Comment, EncodingJob, Favorite, PlaylistVideo, WatchHistory
+from rtube.models import db, Video, VideoVisibility, Comment, EncodingJob, Favorite, PlaylistVideo, WatchHistory, VideoChapter
 from rtube.models_auth import User, UserRole
 
 logger = logging.getLogger(__name__)
@@ -414,6 +414,132 @@ def edit_comment():
     return redirect(url_for('videos.watch_video', v=short_id))
 
 
+def parse_time_to_seconds(time_str: str) -> int:
+    """Parse 'MM:SS' or 'HH:MM:SS' to seconds."""
+    parts = time_str.strip().split(':')
+    try:
+        if len(parts) == 2:
+            m, s = map(int, parts)
+            return m * 60 + s
+        elif len(parts) == 3:
+            h, m, s = map(int, parts)
+            return h * 3600 + m * 60 + s
+        else:
+            return int(time_str)
+    except ValueError:
+        raise ValueError("Invalid time format. Use seconds or MM:SS or HH:MM:SS.")
+
+
+@videos_bp.route('/watch/chapter/add', methods=['POST'])
+@login_required
+def add_chapter():
+    short_id = request.args.get('v', '')
+    if not short_id:
+        return render_template('404.html', title="Video not found", message="No video ID provided."), 404
+
+    video = Video.query.filter(db.func.lower(Video.short_id) == short_id.lower()).first()
+    if not video:
+        return render_template('404.html', title="Video not found", message="Video not found."), 404
+
+    is_owner = video.owner_username == current_user.username
+    is_admin = current_user.is_admin()
+    if not is_owner and not is_admin:
+        abort(403)
+
+    title = request.form.get('title', '').strip()[:255]
+    time_str = request.form.get('time', '').strip()
+
+    if not title or not time_str:
+        flash("Title and time are required.", "error")
+        return redirect(url_for('videos.watch_video', v=short_id))
+
+    try:
+        start_time = parse_time_to_seconds(time_str)
+        if start_time < 0:
+            raise ValueError()
+    except ValueError:
+        flash("Invalid time format. Use seconds, MM:SS, or HH:MM:SS.", "error")
+        return redirect(url_for('videos.watch_video', v=short_id))
+
+    chapter = VideoChapter(video_id=video.id, title=title, start_time=start_time)
+    db.session.add(chapter)
+    db.session.commit()
+    flash("Chapter added successfully.", "success")
+    return redirect(url_for('videos.watch_video', v=short_id))
+
+
+@videos_bp.route('/watch/chapter/edit', methods=['POST'])
+@login_required
+def edit_chapter():
+    short_id = request.args.get('v', '')
+    chapter_id = request.form.get('chapter_id', type=int)
+
+    if not short_id or not chapter_id:
+        return render_template('404.html', title="Invalid request", message="Missing video ID or chapter ID."), 404
+
+    video = Video.query.filter(db.func.lower(Video.short_id) == short_id.lower()).first()
+    if not video:
+        return render_template('404.html', title="Video not found", message="Video not found."), 404
+
+    is_owner = video.owner_username == current_user.username
+    is_admin = current_user.is_admin()
+    if not is_owner and not is_admin:
+        abort(403)
+
+    chapter = VideoChapter.query.filter_by(id=chapter_id, video_id=video.id).first()
+    if not chapter:
+        return render_template('404.html', title="Chapter not found", message="Chapter doesn't exist."), 404
+
+    title = request.form.get('title', '').strip()[:255]
+    time_str = request.form.get('time', '').strip()
+
+    if not title or not time_str:
+        flash("Title and time are required.", "error")
+        return redirect(url_for('videos.watch_video', v=short_id))
+
+    try:
+        start_time = parse_time_to_seconds(time_str)
+        if start_time < 0:
+            raise ValueError()
+    except ValueError:
+        flash("Invalid time format. Use seconds, MM:SS, or HH:MM:SS.", "error")
+        return redirect(url_for('videos.watch_video', v=short_id))
+
+    chapter.title = title
+    chapter.start_time = start_time
+    db.session.commit()
+    flash("Chapter updated successfully.", "success")
+    return redirect(url_for('videos.watch_video', v=short_id))
+
+
+@videos_bp.route('/watch/chapter/delete', methods=['POST'])
+@login_required
+def delete_chapter():
+    short_id = request.args.get('v', '')
+    chapter_id = request.form.get('chapter_id', type=int)
+
+    if not short_id or not chapter_id:
+        return render_template('404.html', title="Invalid request", message="Missing video ID or chapter ID."), 404
+
+    video = Video.query.filter(db.func.lower(Video.short_id) == short_id.lower()).first()
+    if not video:
+        return render_template('404.html', title="Video not found", message="Video not found."), 404
+
+    is_owner = video.owner_username == current_user.username
+    is_admin = current_user.is_admin()
+    if not is_owner and not is_admin:
+        abort(403)
+
+    chapter = VideoChapter.query.filter_by(id=chapter_id, video_id=video.id).first()
+    if not chapter:
+        return render_template('404.html', title="Chapter not found", message="Chapter doesn't exist."), 404
+
+    db.session.delete(chapter)
+    db.session.commit()
+    flash("Chapter deleted successfully.", "success")
+    return redirect(url_for('videos.watch_video', v=short_id))
+
+
 @videos_bp.route('/watch/edit', methods=['GET', 'POST'])
 @login_required
 def edit_video():
@@ -510,6 +636,9 @@ def delete_video():
 
     video_title = video.title or video.filename
     video_filename = video.filename
+
+    # Delete associated chapters
+    VideoChapter.query.filter_by(video_id=video.id).delete()
 
     # Delete associated comments
     Comment.query.filter_by(video_id=video.id).delete()
