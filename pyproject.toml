@@ -43,6 +43,7 @@ rtube = [
     "static/package-lock.json",
     "static/favicon.ico",
     "static/favicon.png",
+    "static/logo_transparent.png",
 ]
 
 [dependency-groups]

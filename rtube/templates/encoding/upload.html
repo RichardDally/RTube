@@ -1,391 +1,424 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="utf-8">
-        <title>RTube - Encode a video</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                max-width: 600px;
-                margin: 0 auto;
-                padding: 20px;
-                background-color: #1a1a1a;
-                color: #fff;
-            }
-            h1 {
-                margin-bottom: 30px;
-            }
-            .form-group {
-                margin-bottom: 20px;
-            }
-            label {
-                display: block;
-                margin-bottom: 8px;
-                font-weight: bold;
-            }
-            input[type="text"],
-            textarea,
-            select {
-                width: 100%;
-                padding: 10px;
-                border: 1px solid #444;
-                border-radius: 5px;
-                background-color: #2a2a2a;
-                color: #fff;
-                box-sizing: border-box;
-            }
-            textarea {
-                height: 100px;
-                resize: vertical;
-            }
-            .char-counter {
-                text-align: right;
-                font-size: 12px;
-                color: #888;
-                margin-top: 5px;
-            }
-            .qualities-grid {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 10px;
-            }
-            .quality-option {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 10px;
-                background-color: #2a2a2a;
-                border-radius: 5px;
-                cursor: pointer;
-            }
-            .quality-option:hover {
-                background-color: #3a3a3a;
-            }
-            .quality-option input[type="checkbox"] {
-                width: 18px;
-                height: 18px;
-            }
-            .file-input-wrapper {
-                position: relative;
-                overflow: hidden;
-                display: inline-block;
-                width: 100%;
-            }
-            .file-input-wrapper input[type="file"] {
-                position: absolute;
-                left: 0;
-                top: 0;
-                opacity: 0;
-                width: 100%;
-                height: 100%;
-                cursor: pointer;
-            }
-            .file-input-label {
-                display: block;
-                padding: 40px 20px;
-                background-color: #2a2a2a;
-                border: 2px dashed #444;
-                border-radius: 5px;
-                text-align: center;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-            .file-input-label:hover {
-                background-color: #3a3a3a;
-                border-color: #666;
-            }
-            .file-input-label.has-file {
-                border-color: #4CAF50;
-                background-color: #1a3a1a;
-            }
-            .file-name {
-                margin-top: 10px;
-                color: #4CAF50;
-            }
-            button[type="submit"] {
-                width: 100%;
-                padding: 15px;
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                font-size: 16px;
-                cursor: pointer;
-                transition: background-color 0.2s;
-            }
-            button[type="submit"]:hover {
-                background-color: #45a049;
-            }
-            button[type="submit"]:disabled {
-                background-color: #666;
-                cursor: not-allowed;
-            }
-            .error {
-                background-color: #ff4444;
-                color: white;
-                padding: 10px;
-                border-radius: 5px;
-                margin-bottom: 20px;
-            }
-            .back-link {
-                display: inline-block;
-                margin-bottom: 20px;
-                color: #888;
-                text-decoration: none;
-            }
-            .back-link:hover {
-                color: #fff;
-            }
-            .nav-links {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 20px;
-            }
-            .btn-jobs {
-                padding: 8px 16px;
-                background-color: #444;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                font-size: 14px;
-                transition: background-color 0.2s;
-            }
-            .btn-jobs:hover {
-                background-color: #555;
-            }
-        </style>
-        <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+<head>
+    <meta charset="utf-8">
+    <title>RTube - Encode a video</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: #2a2a2a;
+            color: #fff;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .char-counter {
+            text-align: right;
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .qualities-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .quality-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            background-color: #2a2a2a;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .quality-option:hover {
+            background-color: #3a3a3a;
+        }
+
+        .quality-option input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 40px 20px;
+            background-color: #2a2a2a;
+            border: 2px dashed #444;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-input-label:hover {
+            background-color: #3a3a3a;
+            border-color: #666;
+        }
+
+        .file-input-label.has-file {
+            border-color: #4CAF50;
+            background-color: #1a3a1a;
+        }
+
+        .file-name {
+            margin-top: 10px;
+            color: #4CAF50;
+        }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        button[type="submit"]:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+
+        .error {
+            background-color: #ff4444;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #888;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .btn-jobs {
+            padding: 8px 16px;
+            background-color: #444;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-jobs:hover {
+            background-color: #555;
+        }
+    </style>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 
 </head>
-    <body>
-        <div class="nav-links">
-            <a href="/" class="back-link">&larr; Back to videos</a>
-            <a href="/encode/status/" class="btn-jobs">Encoding jobs</a>
+
+<body>
+    <div class="header">
+        <div class="header-left" style="display: flex; align-items: center; gap: 20px;">
+            <a href="/" class="back-link"
+                style="display: inline-flex; align-items: center; gap: 5px; margin-bottom: 0;"><img
+                    src="{{ url_for('static', filename='logo_transparent.png') }}" alt="RTube" height="30"></a>
+            <h1 style="margin: 0;">Encode a video</h1>
         </div>
-        <h1>Encode a video</h1>
+        <a href="/encode/status/" class="btn-jobs">Encoding jobs</a>
+    </div>
 
-        {% if error %}
-        <div class="error">{{ error }}</div>
-        {% endif %}
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
 
-        <form method="post" enctype="multipart/form-data" id="upload-form">
-            <div class="form-group">
-                <label for="title">Title *</label>
-                <input type="text" id="title" name="title" required placeholder="Video title">
+    <form method="post" enctype="multipart/form-data" id="upload-form">
+        <div class="form-group">
+            <label for="title">Title *</label>
+            <input type="text" id="title" name="title" required placeholder="Video title">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" placeholder="Optional description"
+                maxlength="5000"></textarea>
+            <div class="char-counter"><span id="char-count">0</span> / 5000</div>
+        </div>
+
+        <div class="form-group">
+            <label for="language">Language</label>
+            <select id="language" name="language">
+                <option value="">-- Select language (optional) --</option>
+                <option value="af">Afrikaans</option>
+                <option value="sq">Albanian</option>
+                <option value="am">Amharic</option>
+                <option value="ar">Arabic</option>
+                <option value="hy">Armenian</option>
+                <option value="az">Azerbaijani</option>
+                <option value="eu">Basque</option>
+                <option value="be">Belarusian</option>
+                <option value="bn">Bengali</option>
+                <option value="bs">Bosnian</option>
+                <option value="bg">Bulgarian</option>
+                <option value="my">Burmese</option>
+                <option value="ca">Catalan</option>
+                <option value="zh">Chinese</option>
+                <option value="hr">Croatian</option>
+                <option value="cs">Czech</option>
+                <option value="da">Danish</option>
+                <option value="nl">Dutch</option>
+                <option value="en">English</option>
+                <option value="et">Estonian</option>
+                <option value="fi">Finnish</option>
+                <option value="fr">French</option>
+                <option value="gl">Galician</option>
+                <option value="ka">Georgian</option>
+                <option value="de">German</option>
+                <option value="el">Greek</option>
+                <option value="gu">Gujarati</option>
+                <option value="ht">Haitian Creole</option>
+                <option value="ha">Hausa</option>
+                <option value="he">Hebrew</option>
+                <option value="hi">Hindi</option>
+                <option value="hu">Hungarian</option>
+                <option value="is">Icelandic</option>
+                <option value="ig">Igbo</option>
+                <option value="id">Indonesian</option>
+                <option value="ga">Irish</option>
+                <option value="it">Italian</option>
+                <option value="ja">Japanese</option>
+                <option value="jv">Javanese</option>
+                <option value="kn">Kannada</option>
+                <option value="kk">Kazakh</option>
+                <option value="km">Khmer</option>
+                <option value="ko">Korean</option>
+                <option value="ku">Kurdish</option>
+                <option value="ky">Kyrgyz</option>
+                <option value="lo">Lao</option>
+                <option value="la">Latin</option>
+                <option value="lv">Latvian</option>
+                <option value="lt">Lithuanian</option>
+                <option value="lb">Luxembourgish</option>
+                <option value="mk">Macedonian</option>
+                <option value="mg">Malagasy</option>
+                <option value="ms">Malay</option>
+                <option value="ml">Malayalam</option>
+                <option value="mt">Maltese</option>
+                <option value="mi">Maori</option>
+                <option value="mr">Marathi</option>
+                <option value="mn">Mongolian</option>
+                <option value="ne">Nepali</option>
+                <option value="no">Norwegian</option>
+                <option value="ps">Pashto</option>
+                <option value="fa">Persian</option>
+                <option value="pl">Polish</option>
+                <option value="pt">Portuguese</option>
+                <option value="pa">Punjabi</option>
+                <option value="ro">Romanian</option>
+                <option value="ru">Russian</option>
+                <option value="sm">Samoan</option>
+                <option value="gd">Scottish Gaelic</option>
+                <option value="sr">Serbian</option>
+                <option value="sn">Shona</option>
+                <option value="sd">Sindhi</option>
+                <option value="si">Sinhala</option>
+                <option value="sk">Slovak</option>
+                <option value="sl">Slovenian</option>
+                <option value="so">Somali</option>
+                <option value="es">Spanish</option>
+                <option value="su">Sundanese</option>
+                <option value="sw">Swahili</option>
+                <option value="sv">Swedish</option>
+                <option value="tl">Tagalog</option>
+                <option value="tg">Tajik</option>
+                <option value="ta">Tamil</option>
+                <option value="tt">Tatar</option>
+                <option value="te">Telugu</option>
+                <option value="th">Thai</option>
+                <option value="tr">Turkish</option>
+                <option value="tk">Turkmen</option>
+                <option value="uk">Ukrainian</option>
+                <option value="ur">Urdu</option>
+                <option value="ug">Uyghur</option>
+                <option value="uz">Uzbek</option>
+                <option value="vi">Vietnamese</option>
+                <option value="cy">Welsh</option>
+                <option value="xh">Xhosa</option>
+                <option value="yi">Yiddish</option>
+                <option value="yo">Yoruba</option>
+                <option value="zu">Zulu</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="visibility">Visibility</label>
+            <select id="visibility" name="visibility">
+                <option value="public" selected>Public - Visible by everyone</option>
+                <option value="private">Private - Only visible by logged-in users</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Qualities to encode *</label>
+            <div class="qualities-grid">
+                <label class="quality-option">
+                    <input type="checkbox" name="qualities" value="144p">
+                    144p
+                </label>
+                <label class="quality-option">
+                    <input type="checkbox" name="qualities" value="240p">
+                    240p
+                </label>
+                <label class="quality-option">
+                    <input type="checkbox" name="qualities" value="360p">
+                    360p
+                </label>
+                <label class="quality-option">
+                    <input type="checkbox" name="qualities" value="480p">
+                    480p
+                </label>
+                <label class="quality-option" title="HD">
+                    <input type="checkbox" name="qualities" value="720p">
+                    720p
+                </label>
+                <label class="quality-option" title="Full HD">
+                    <input type="checkbox" name="qualities" value="1080p" checked>
+                    1080p
+                </label>
+                <label class="quality-option">
+                    <input type="checkbox" name="qualities" value="1440p">
+                    1440p
+                </label>
+                <label class="quality-option" title="Ultra HD">
+                    <input type="checkbox" name="qualities" value="2160p">
+                    2160p
+                </label>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label for="description">Description</label>
-                <textarea id="description" name="description" placeholder="Optional description" maxlength="5000"></textarea>
-                <div class="char-counter"><span id="char-count">0</span> / 5000</div>
-            </div>
-
-            <div class="form-group">
-                <label for="language">Language</label>
-                <select id="language" name="language">
-                    <option value="">-- Select language (optional) --</option>
-                    <option value="af">Afrikaans</option>
-                    <option value="sq">Albanian</option>
-                    <option value="am">Amharic</option>
-                    <option value="ar">Arabic</option>
-                    <option value="hy">Armenian</option>
-                    <option value="az">Azerbaijani</option>
-                    <option value="eu">Basque</option>
-                    <option value="be">Belarusian</option>
-                    <option value="bn">Bengali</option>
-                    <option value="bs">Bosnian</option>
-                    <option value="bg">Bulgarian</option>
-                    <option value="my">Burmese</option>
-                    <option value="ca">Catalan</option>
-                    <option value="zh">Chinese</option>
-                    <option value="hr">Croatian</option>
-                    <option value="cs">Czech</option>
-                    <option value="da">Danish</option>
-                    <option value="nl">Dutch</option>
-                    <option value="en">English</option>
-                    <option value="et">Estonian</option>
-                    <option value="fi">Finnish</option>
-                    <option value="fr">French</option>
-                    <option value="gl">Galician</option>
-                    <option value="ka">Georgian</option>
-                    <option value="de">German</option>
-                    <option value="el">Greek</option>
-                    <option value="gu">Gujarati</option>
-                    <option value="ht">Haitian Creole</option>
-                    <option value="ha">Hausa</option>
-                    <option value="he">Hebrew</option>
-                    <option value="hi">Hindi</option>
-                    <option value="hu">Hungarian</option>
-                    <option value="is">Icelandic</option>
-                    <option value="ig">Igbo</option>
-                    <option value="id">Indonesian</option>
-                    <option value="ga">Irish</option>
-                    <option value="it">Italian</option>
-                    <option value="ja">Japanese</option>
-                    <option value="jv">Javanese</option>
-                    <option value="kn">Kannada</option>
-                    <option value="kk">Kazakh</option>
-                    <option value="km">Khmer</option>
-                    <option value="ko">Korean</option>
-                    <option value="ku">Kurdish</option>
-                    <option value="ky">Kyrgyz</option>
-                    <option value="lo">Lao</option>
-                    <option value="la">Latin</option>
-                    <option value="lv">Latvian</option>
-                    <option value="lt">Lithuanian</option>
-                    <option value="lb">Luxembourgish</option>
-                    <option value="mk">Macedonian</option>
-                    <option value="mg">Malagasy</option>
-                    <option value="ms">Malay</option>
-                    <option value="ml">Malayalam</option>
-                    <option value="mt">Maltese</option>
-                    <option value="mi">Maori</option>
-                    <option value="mr">Marathi</option>
-                    <option value="mn">Mongolian</option>
-                    <option value="ne">Nepali</option>
-                    <option value="no">Norwegian</option>
-                    <option value="ps">Pashto</option>
-                    <option value="fa">Persian</option>
-                    <option value="pl">Polish</option>
-                    <option value="pt">Portuguese</option>
-                    <option value="pa">Punjabi</option>
-                    <option value="ro">Romanian</option>
-                    <option value="ru">Russian</option>
-                    <option value="sm">Samoan</option>
-                    <option value="gd">Scottish Gaelic</option>
-                    <option value="sr">Serbian</option>
-                    <option value="sn">Shona</option>
-                    <option value="sd">Sindhi</option>
-                    <option value="si">Sinhala</option>
-                    <option value="sk">Slovak</option>
-                    <option value="sl">Slovenian</option>
-                    <option value="so">Somali</option>
-                    <option value="es">Spanish</option>
-                    <option value="su">Sundanese</option>
-                    <option value="sw">Swahili</option>
-                    <option value="sv">Swedish</option>
-                    <option value="tl">Tagalog</option>
-                    <option value="tg">Tajik</option>
-                    <option value="ta">Tamil</option>
-                    <option value="tt">Tatar</option>
-                    <option value="te">Telugu</option>
-                    <option value="th">Thai</option>
-                    <option value="tr">Turkish</option>
-                    <option value="tk">Turkmen</option>
-                    <option value="uk">Ukrainian</option>
-                    <option value="ur">Urdu</option>
-                    <option value="ug">Uyghur</option>
-                    <option value="uz">Uzbek</option>
-                    <option value="vi">Vietnamese</option>
-                    <option value="cy">Welsh</option>
-                    <option value="xh">Xhosa</option>
-                    <option value="yi">Yiddish</option>
-                    <option value="yo">Yoruba</option>
-                    <option value="zu">Zulu</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="visibility">Visibility</label>
-                <select id="visibility" name="visibility">
-                    <option value="public" selected>Public - Visible by everyone</option>
-                    <option value="private">Private - Only visible by logged-in users</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Qualities to encode *</label>
-                <div class="qualities-grid">
-                    <label class="quality-option">
-                        <input type="checkbox" name="qualities" value="144p">
-                        144p
-                    </label>
-                    <label class="quality-option">
-                        <input type="checkbox" name="qualities" value="240p">
-                        240p
-                    </label>
-                    <label class="quality-option">
-                        <input type="checkbox" name="qualities" value="360p">
-                        360p
-                    </label>
-                    <label class="quality-option">
-                        <input type="checkbox" name="qualities" value="480p">
-                        480p
-                    </label>
-                    <label class="quality-option" title="HD">
-                        <input type="checkbox" name="qualities" value="720p">
-                        720p
-                    </label>
-                    <label class="quality-option" title="Full HD">
-                        <input type="checkbox" name="qualities" value="1080p" checked>
-                        1080p
-                    </label>
-                    <label class="quality-option">
-                        <input type="checkbox" name="qualities" value="1440p">
-                        1440p
-                    </label>
-                    <label class="quality-option" title="Ultra HD">
-                        <input type="checkbox" name="qualities" value="2160p">
-                        2160p
-                    </label>
+        <div class="form-group">
+            <label>Video file (MP4, MKV) *</label>
+            <div class="file-input-wrapper">
+                <div class="file-input-label" id="file-label">
+                    Click or drag and drop a video file
+                    <div class="file-name" id="file-name"></div>
                 </div>
+                <input type="file" id="video" name="video" accept=".mp4,.mkv,video/mp4,video/x-matroska" required>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label>Video file (MP4, MKV) *</label>
-                <div class="file-input-wrapper">
-                    <div class="file-input-label" id="file-label">
-                        Click or drag and drop a video file
-                        <div class="file-name" id="file-name"></div>
-                    </div>
-                    <input type="file" id="video" name="video" accept=".mp4,.mkv,video/mp4,video/x-matroska" required>
-                </div>
-            </div>
+        <button type="submit" id="submit-btn">Upload and encode</button>
+    </form>
 
-            <button type="submit" id="submit-btn">Upload and encode</button>
-        </form>
+    <script>
+        const fileInput = document.getElementById('video');
+        const fileLabel = document.getElementById('file-label');
+        const fileName = document.getElementById('file-name');
+        const submitBtn = document.getElementById('submit-btn');
+        const description = document.getElementById('description');
+        const charCount = document.getElementById('char-count');
 
-        <script>
-            const fileInput = document.getElementById('video');
-            const fileLabel = document.getElementById('file-label');
-            const fileName = document.getElementById('file-name');
-            const submitBtn = document.getElementById('submit-btn');
-            const description = document.getElementById('description');
-            const charCount = document.getElementById('char-count');
+        description.addEventListener('input', function () {
+            charCount.textContent = this.value.length;
+        });
 
-            description.addEventListener('input', function() {
-                charCount.textContent = this.value.length;
-            });
-
-            fileInput.addEventListener('change', function() {
-                if (this.files && this.files[0]) {
-                    const file = this.files[0];
-                    const validTypes = ['video/mp4', 'video/x-matroska'];
-                    const validExtensions = ['.mp4', '.mkv'];
-                    const hasValidType = validTypes.includes(file.type);
-                    const hasValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
-                    if (!hasValidType && !hasValidExtension) {
-                        alert('Only MP4 and MKV files are accepted');
-                        this.value = '';
-                        fileLabel.classList.remove('has-file');
-                        fileName.textContent = '';
-                        return;
-                    }
-                    fileLabel.classList.add('has-file');
-                    const size = (file.size / (1024 * 1024)).toFixed(2);
-                    fileName.textContent = file.name + ' (' + size + ' MB)';
-                } else {
+        fileInput.addEventListener('change', function () {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                const validTypes = ['video/mp4', 'video/x-matroska'];
+                const validExtensions = ['.mp4', '.mkv'];
+                const hasValidType = validTypes.includes(file.type);
+                const hasValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+                if (!hasValidType && !hasValidExtension) {
+                    alert('Only MP4 and MKV files are accepted');
+                    this.value = '';
                     fileLabel.classList.remove('has-file');
                     fileName.textContent = '';
+                    return;
                 }
-            });
+                fileLabel.classList.add('has-file');
+                const size = (file.size / (1024 * 1024)).toFixed(2);
+                fileName.textContent = file.name + ' (' + size + ' MB)';
+            } else {
+                fileLabel.classList.remove('has-file');
+                fileName.textContent = '';
+            }
+        });
 
-            document.getElementById('upload-form').addEventListener('submit', function() {
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Uploading...';
-            });
-        </script>
-    </body>
+        document.getElementById('upload-form').addEventListener('submit', function () {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Uploading...';
+        });
+    </script>
+</body>
+
 </html>

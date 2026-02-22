@@ -124,7 +124,10 @@
 </head>
     <body>
         <div class="header">
-            <h1>Encoding Jobs</h1>
+            <div class="header-left" style="display: flex; align-items: center; gap: 20px;">
+                <a href="/" class="back-link" style="display: inline-flex; align-items: center; gap: 5px;"><img src="{{ url_for('static', filename='logo_transparent.png') }}" alt="RTube" height="30"></a>
+                <h1>Encoding Jobs</h1>
+            </div>
             <div class="nav-links">
                 <a href="/" class="btn btn-secondary">Videos</a>
                 <a href="/encode" class="btn btn-primary">Encode a video</a>

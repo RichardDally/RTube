@@ -1,634 +1,599 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="utf-8">
-        <title>RTube - Videos</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                max-width: 800px;
-                margin: 0 auto;
-                padding: 20px;
-                background-color: #1a1a1a;
-                color: #fff;
-            }
-            h1 {
-                margin-bottom: 30px;
-            }
-            .video-list {
-                list-style: none;
-                padding: 0;
-            }
-            .video-list li {
-                margin-bottom: 15px;
-            }
-            .video-list a {
-                display: flex;
-                align-items: center;
-                gap: 15px;
-                padding: 10px;
-                background-color: #2a2a2a;
-                color: #fff;
-                text-decoration: none;
-                border-radius: 5px;
-                transition: background-color 0.2s;
-            }
-            .video-list a:hover {
-                background-color: #3a3a3a;
-            }
-            .thumbnail-container {
-                position: relative;
-                width: 160px;
-                height: 90px;
-                flex-shrink: 0;
-                border-radius: 4px;
-                overflow: hidden;
-                background-color: #444;
-            }
-            .thumbnail {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                border-radius: 4px;
-                background-color: #444;
-            }
-            .thumbnail-preview {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                opacity: 0;
-                transition: opacity 0.2s ease;
-            }
-            .thumbnail-container:hover .thumbnail-preview {
-                opacity: 1;
-            }
-            .thumbnail-container:hover .thumbnail {
-                opacity: 0;
-            }
-            .video-info {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                gap: 5px;
-            }
-            .video-title {
-                font-size: 16px;
-                font-weight: 500;
-            }
-            .video-meta {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                flex-wrap: wrap;
-            }
-            .view-count {
-                color: #888;
-                font-size: 13px;
-            }
-            .language-badge {
-                background-color: #444;
-                color: #ccc;
-                padding: 2px 8px;
-                border-radius: 3px;
-                font-size: 11px;
-                text-transform: uppercase;
-            }
-            .private-badge {
-                background-color: #8B4513;
-                color: #fff;
-                padding: 2px 8px;
-                border-radius: 3px;
-                font-size: 11px;
-            }
-            .video-description {
-                color: #888;
-                font-size: 13px;
-                margin-top: 5px;
-                display: -webkit-box;
-                -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
-            }
-            .video-owner {
-                color: #888;
-                font-size: 12px;
-                flex-shrink: 0;
-                align-self: center;
-            }
-            .empty-message {
-                color: #888;
-                font-style: italic;
-            }
-            .header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 30px;
-            }
-            .header h1 {
-                margin: 0;
-            }
-            .btn-upload {
-                padding: 10px 20px;
-                background-color: #4CAF50;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                transition: background-color 0.2s;
-            }
-            .btn-upload:hover {
-                background-color: #45a049;
-            }
-            .header-actions {
-                display: flex;
-                align-items: center;
-                gap: 15px;
-            }
-            .auth-links {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                font-size: 14px;
-            }
-            .auth-links a {
-                color: #888;
-                text-decoration: none;
-            }
-            .auth-links a:hover {
-                color: #fff;
-            }
-            .username {
-                color: #4CAF50;
-                text-decoration: none;
-            }
-            .username:hover {
-                text-decoration: underline;
-            }
-            .btn-login {
-                padding: 8px 16px;
-                background-color: #444;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                transition: background-color 0.2s;
-            }
-            .btn-login:hover {
-                background-color: #555;
-            }
-            .btn-admin {
-                padding: 8px 16px;
-                background-color: #8B0000;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                font-size: 13px;
-                transition: background-color 0.2s;
-            }
-            .btn-admin:hover {
-                background-color: #a00000;
-            }
-            .btn-playlists {
-                padding: 8px 16px;
-                background-color: #444;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                font-size: 13px;
-                transition: background-color 0.2s;
-            }
-            .btn-playlists:hover {
-                background-color: #555;
-            }
-            .nav-left {
-                display: flex;
-                align-items: center;
-                gap: 15px;
-            }
-            .nav-right {
-                display: flex;
-                align-items: center;
-                gap: 15px;
-            }
-            .btn-logout {
-                padding: 8px 16px;
-                background-color: #8B0000;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                font-size: 13px;
-                transition: background-color 0.2s;
-            }
-            .btn-logout:hover {
-                background-color: #a00000;
-            }
-            .dropdown {
-                position: relative;
-                display: inline-block;
-            }
-            .dropdown-toggle {
-                padding: 8px 16px;
-                background-color: #444;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                font-size: 13px;
-                cursor: pointer;
-                transition: background-color 0.2s;
-            }
-            .dropdown-toggle:hover {
-                background-color: #555;
-            }
-            .dropdown-toggle::after {
-                content: " \25BC";
-                font-size: 10px;
-            }
-            .dropdown-menu {
-                display: none;
-                position: absolute;
-                top: 100%;
-                left: 0;
-                background-color: #2a2a2a;
-                border-radius: 5px;
-                min-width: 160px;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-                z-index: 1000;
-                margin-top: 5px;
-            }
-            .dropdown:hover .dropdown-menu {
-                display: block;
-            }
-            .dropdown-menu a {
-                display: block;
-                padding: 10px 15px;
-                color: #fff;
-                text-decoration: none;
-                font-size: 13px;
-            }
-            .dropdown-menu a:hover {
-                background-color: #3a3a3a;
-            }
-            footer {
-                margin-top: 50px;
-                padding-top: 20px;
-                border-top: 1px solid #333;
-                text-align: center;
-                color: #666;
-                font-size: 12px;
-            }
-            .flash-messages {
-                margin-bottom: 20px;
-            }
-            .flash-message {
-                padding: 12px;
-                border-radius: 4px;
-                margin-bottom: 10px;
-                font-size: 14px;
-            }
-            .flash-error {
-                background-color: #5c1a1a;
-                color: #ff6b6b;
-                border: 1px solid #8B0000;
-            }
-            .flash-success {
-                background-color: #1a3d1a;
-                color: #81C784;
-                border: 1px solid #2E7D32;
-            }
-            .search-form {
-                display: flex;
-                gap: 10px;
-                margin-bottom: 20px;
-            }
-            .search-input {
-                flex: 1;
-                padding: 10px 15px;
-                border: 1px solid #444;
-                border-radius: 5px;
-                background-color: #2a2a2a;
-                color: #fff;
-                font-size: 14px;
-            }
-            .search-input:focus {
-                outline: none;
-                border-color: #4CAF50;
-            }
-            .search-input::placeholder {
-                color: #888;
-            }
-            .btn-search {
-                padding: 10px 20px;
-                background-color: #444;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                font-size: 14px;
-                cursor: pointer;
-                transition: background-color 0.2s;
-            }
-            .btn-search:hover {
-                background-color: #555;
-            }
-            .search-results-header {
-                margin-bottom: 20px;
-                padding-bottom: 10px;
-                border-bottom: 1px solid #333;
-            }
-            .search-results-header h2 {
-                margin: 0 0 5px 0;
-                font-size: 18px;
-            }
-            .search-results-header p {
-                margin: 0;
-                color: #888;
-                font-size: 14px;
-            }
-            .search-category {
-                margin-bottom: 30px;
-            }
-            .search-category h3 {
-                color: #4CAF50;
-                font-size: 16px;
-                margin-bottom: 15px;
-                padding-bottom: 8px;
-                border-bottom: 1px solid #333;
-            }
-            .btn-clear {
-                padding: 10px 20px;
-                background-color: #444;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                font-size: 14px;
-                transition: background-color 0.2s;
-            }
-            .btn-clear:hover {
-                background-color: #555;
-            }
-            /* Announcement banner */
-            .announcement-banner {
-                background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%);
-                color: #fff;
-                padding: 12px 20px;
-                border-radius: 6px;
-                margin-bottom: 20px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                font-size: 14px;
-                line-height: 1.4;
-            }
-            .announcement-banner .announcement-icon {
-                font-size: 18px;
-                flex-shrink: 0;
-            }
-            .announcement-banner .announcement-message {
-                flex: 1;
-            }
-            .announcement-banner .announcement-close {
-                background: none;
-                border: none;
-                color: rgba(255, 255, 255, 0.7);
-                font-size: 20px;
-                cursor: pointer;
-                padding: 0 5px;
-                line-height: 1;
-                transition: color 0.2s;
-            }
-            .announcement-banner .announcement-close:hover {
-                color: #fff;
-            }
-        </style>
-        <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+<head>
+    <meta charset="utf-8">
+    <title>RTube - Videos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        .video-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .video-list li {
+            margin-bottom: 15px;
+        }
+
+        .video-list a {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px;
+            background-color: #2a2a2a;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        .video-list a:hover {
+            background-color: #3a3a3a;
+        }
+
+        .thumbnail-container {
+            position: relative;
+            width: 160px;
+            height: 90px;
+            flex-shrink: 0;
+            border-radius: 4px;
+            overflow: hidden;
+            background-color: #444;
+        }
+
+        .thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+            background-color: #444;
+        }
+
+        .thumbnail-preview {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .thumbnail-container:hover .thumbnail-preview {
+            opacity: 1;
+        }
+
+        .thumbnail-container:hover .thumbnail {
+            opacity: 0;
+        }
+
+        .video-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .video-title {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .video-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .view-count {
+            color: #888;
+            font-size: 13px;
+        }
+
+        .language-badge {
+            background-color: #444;
+            color: #ccc;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .private-badge {
+            background-color: #8B4513;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        .video-description {
+            color: #888;
+            font-size: 13px;
+            margin-top: 5px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .video-owner {
+            color: #888;
+            font-size: 12px;
+            flex-shrink: 0;
+            align-self: center;
+        }
+
+        .empty-message {
+            color: #888;
+            font-style: italic;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin: 0;
+        }
+
+        .btn-upload {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-upload:hover {
+            background-color: #45a049;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .auth-links {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .auth-links a {
+            color: #888;
+            text-decoration: none;
+        }
+
+        .auth-links a:hover {
+            color: #fff;
+        }
+
+        .username {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+
+        .username:hover {
+            text-decoration: underline;
+        }
+
+        .btn-login {
+            padding: 8px 16px;
+            background-color: #444;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-login:hover {
+            background-color: #555;
+        }
+
+        .btn-register {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-register:hover {
+            background-color: #45a049;
+        }
+
+        .btn-admin {
+            padding: 8px 16px;
+            background-color: #8B0000;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 13px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-admin:hover {
+            background-color: #a00000;
+        }
+
+        .btn-playlists {
+            padding: 8px 16px;
+            background-color: #444;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 13px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-playlists:hover {
+            background-color: #555;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-logout {
+            padding: 8px 16px;
+            background-color: #8B0000;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 13px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-logout:hover {
+            background-color: #a00000;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-toggle {
+            padding: 8px 16px;
+            background-color: #444;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .dropdown-toggle:hover {
+            background-color: #555;
+        }
+
+        .dropdown-toggle::after {
+            content: " \25BC";
+            font-size: 10px;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: #2a2a2a;
+            border-radius: 5px;
+            min-width: 160px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            margin-top: 5px;
+        }
+
+        .dropdown:hover .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-menu a {
+            display: block;
+            padding: 10px 15px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .dropdown-menu a:hover {
+            background-color: #3a3a3a;
+        }
+
+        footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+
+        .flash-message {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .flash-error {
+            background-color: #5c1a1a;
+            color: #ff6b6b;
+            border: 1px solid #8B0000;
+        }
+
+        .flash-success {
+            background-color: #1a3d1a;
+            color: #81C784;
+            border: 1px solid #2E7D32;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: #2a2a2a;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .search-input::placeholder {
+            color: #888;
+        }
+
+        .btn-search {
+            padding: 10px 20px;
+            background-color: #444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-search:hover {
+            background-color: #555;
+        }
+
+        .search-results-header {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .search-results-header h2 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+        }
+
+        .search-results-header p {
+            margin: 0;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .search-category {
+            margin-bottom: 30px;
+        }
+
+        .search-category h3 {
+            color: #4CAF50;
+            font-size: 16px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+        }
+
+        .btn-clear {
+            padding: 10px 20px;
+            background-color: #444;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-clear:hover {
+            background-color: #555;
+        }
+
+        /* Announcement banner */
+        .announcement-banner {
+            background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .announcement-banner .announcement-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .announcement-banner .announcement-message {
+            flex: 1;
+        }
+
+        .announcement-banner .announcement-close {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0 5px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .announcement-banner .announcement-close:hover {
+            color: #fff;
+        }
+    </style>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 
 </head>
-    <body>
-        <div class="header">
-            <div class="nav-left">
-                <h1><a href="/" style="color: inherit; text-decoration: none;">RTube</a></h1>
-                {% if current_user.is_authenticated %}
-                <a href="{{ url_for('playlists.index') }}" class="btn-playlists">Playlists</a>
-                <a href="{{ url_for('videos.watch_history') }}" class="btn-playlists">History</a>
-                {% if current_user.can_upload() %}
-                <div class="dropdown">
-                    <span class="dropdown-toggle">Encoding</span>
-                    <div class="dropdown-menu">
-                        <a href="/encode">Encode a video</a>
-                        <a href="{{ url_for('encoding.encoding_jobs_list') }}">Encoding jobs</a>
-                    </div>
-                </div>
-                {% endif %}
-                {% if current_user.is_admin() %}
-                <div class="dropdown">
-                    <span class="dropdown-toggle btn-admin">Admin</span>
-                    <div class="dropdown-menu">
-                        <a href="{{ url_for('admin.analytics') }}">Analytics</a>
-                        <a href="{{ url_for('admin.users') }}">Users</a>
-                        <a href="{{ url_for('admin.videos') }}">Videos</a>
-                        <a href="{{ url_for('admin.import_videos') }}">Import Videos</a>
-                        <a href="{{ url_for('admin.regenerate_previews') }}">Regenerate Previews</a>
-                        <a href="{{ url_for('admin.announcements') }}">Announcements</a>
-                        <a href="{{ url_for('admin.audit_log') }}">Audit Log</a>
-                    </div>
-                </div>
-                {% endif %}
-                {% endif %}
-            </div>
-            <div class="nav-right">
-                {% if current_user.is_authenticated %}
-                <a href="{{ url_for('auth.profile') }}" class="username">{{ current_user.username }}</a>
-                <a href="{{ url_for('auth.logout') }}" class="btn-logout">Logout</a>
-                {% else %}
-                <a href="{{ url_for('auth.login') }}" class="btn-login">Login</a>
-                {% if not oidc_enabled %}<a href="{{ url_for('auth.register') }}">Register</a>{% endif %}
-                {% endif %}
-            </div>
-        </div>
 
-        <form class="search-form" method="get" action="/">
-            <input type="text" name="q" class="search-input" placeholder="Search by title, description or author..." value="{{ search_query or '' }}">
-            <button type="submit" class="btn-search">Search</button>
-            {% if search_query %}
-            <a href="/" class="btn-clear">Clear</a>
+<body>
+    <div class="header">
+        <div class="nav-left">
+            <h1><a href="/" style="color: inherit; text-decoration: none; display: flex; align-items: center;"><img
+                        src="{{ url_for('static', filename='logo_transparent.png') }}" alt="RTube" height="30"></a></h1>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('playlists.index') }}" class="btn-playlists">Playlists</a>
+            <a href="{{ url_for('videos.watch_history') }}" class="btn-playlists">History</a>
+            {% if current_user.can_upload() %}
+            <div class="dropdown">
+                <span class="dropdown-toggle">Encoding</span>
+                <div class="dropdown-menu">
+                    <a href="/encode">Encode a video</a>
+                    <a href="{{ url_for('encoding.encoding_jobs_list') }}">Encoding jobs</a>
+                </div>
+            </div>
             {% endif %}
-        </form>
-
-        {% if active_announcement %}
-        <div class="announcement-banner" id="announcement-{{ active_announcement.id }}">
-            <span class="announcement-icon">&#128227;</span>
-            <span class="announcement-message">{{ active_announcement.message }}</span>
-            <button class="announcement-close" onclick="dismissAnnouncement({{ active_announcement.id }})" title="Dismiss">&times;</button>
+            {% if current_user.is_admin() %}
+            <div class="dropdown">
+                <span class="dropdown-toggle btn-admin">Admin</span>
+                <div class="dropdown-menu">
+                    <a href="{{ url_for('admin.analytics') }}">Analytics</a>
+                    <a href="{{ url_for('admin.users') }}">Users</a>
+                    <a href="{{ url_for('admin.videos') }}">Videos</a>
+                    <a href="{{ url_for('admin.import_videos') }}">Import Videos</a>
+                    <a href="{{ url_for('admin.regenerate_previews') }}">Regenerate Previews</a>
+                    <a href="{{ url_for('admin.announcements') }}">Announcements</a>
+                    <a href="{{ url_for('admin.audit_log') }}">Audit Log</a>
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
         </div>
-        {% endif %}
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <div class="flash-messages">
-            {% for category, message in messages %}
-            <div class="flash-message flash-{{ category }}">{{ message }}</div>
-            {% endfor %}
+        <div class="nav-right">
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('auth.profile') }}" class="username">{{ current_user.username }}</a>
+            <a href="{{ url_for('auth.logout') }}" class="btn-logout">Logout</a>
+            {% else %}
+            <a href="{{ url_for('auth.login') }}" class="btn-login">Login</a>
+            {% if not oidc_enabled %}<a href="{{ url_for('auth.register') }}" class="btn-register">Register</a>{% endif
+            %}
+            {% endif %}
         </div>
-        {% endif %}
-        {% endwith %}
+    </div>
 
+    <form class="search-form" method="get" action="/">
+        <input type="text" name="q" class="search-input" placeholder="Search by title, description or author..."
+            value="{{ search_query or '' }}">
+        <button type="submit" class="btn-search">Search</button>
         {% if search_query %}
-        <div class="search-results-header">
-            <h2>Search results for "{{ search_query }}"</h2>
-            <p>{{ total_results }} result{{ 's' if total_results != 1 else '' }} found</p>
-        </div>
-
-        {% if total_results > 0 %}
-            {% if results_by_title %}
-            <div class="search-category">
-                <h3>By title ({{ results_by_title | length }})</h3>
-                <ul class="video-list">
-                    {% for video in results_by_title %}
-                    <li>
-                        <a href="/watch?v={{ video.short_id }}">
-                            <div class="thumbnail-container">
-                                {% if video.thumbnail %}
-                                <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
-                                {% else %}
-                                <div class="thumbnail"></div>
-                                {% endif %}
-                                {% if video.preview %}
-                                <video class="thumbnail-preview" muted="muted" loop playsinline preload="none" data-src="{{ url_for('videos.serve_thumbnail', filename=video.preview) }}"></video>
-                                {% endif %}
-                            </div>
-                            <div class="video-info">
-                                <span class="video-title">{{ video.title or video.filename }}</span>
-                                <div class="video-meta">
-                                    <span class="view-count">{{ video.view_count }} view{{ 's' if video.view_count != 1 else '' }}</span>
-                                    {% if video.language %}
-                                    <span class="language-badge">{{ video.language }}</span>
-                                    {% endif %}
-                                    {% if video.visibility == 'private' %}
-                                    <span class="private-badge">Private</span>
-                                    {% endif %}
-                                </div>
-                                {% if video.description %}
-                                <span class="video-description">{{ video.description }}</span>
-                                {% endif %}
-                            </div>
-                            {% if video.owner_username %}
-                            <span class="video-owner">{{ video.owner_username }}</span>
-                            {% endif %}
-                        </a>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-
-            {% if results_by_description %}
-            <div class="search-category">
-                <h3>By description ({{ results_by_description | length }})</h3>
-                <ul class="video-list">
-                    {% for video in results_by_description %}
-                    <li>
-                        <a href="/watch?v={{ video.short_id }}">
-                            <div class="thumbnail-container">
-                                {% if video.thumbnail %}
-                                <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
-                                {% else %}
-                                <div class="thumbnail"></div>
-                                {% endif %}
-                                {% if video.preview %}
-                                <video class="thumbnail-preview" muted="muted" loop playsinline preload="none" data-src="{{ url_for('videos.serve_thumbnail', filename=video.preview) }}"></video>
-                                {% endif %}
-                            </div>
-                            <div class="video-info">
-                                <span class="video-title">{{ video.title or video.filename }}</span>
-                                <div class="video-meta">
-                                    <span class="view-count">{{ video.view_count }} view{{ 's' if video.view_count != 1 else '' }}</span>
-                                    {% if video.language %}
-                                    <span class="language-badge">{{ video.language }}</span>
-                                    {% endif %}
-                                    {% if video.visibility == 'private' %}
-                                    <span class="private-badge">Private</span>
-                                    {% endif %}
-                                </div>
-                                {% if video.description %}
-                                <span class="video-description">{{ video.description }}</span>
-                                {% endif %}
-                            </div>
-                            {% if video.owner_username %}
-                            <span class="video-owner">{{ video.owner_username }}</span>
-                            {% endif %}
-                        </a>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-
-            {% if results_by_author %}
-            <div class="search-category">
-                <h3>By author ({{ results_by_author | length }})</h3>
-                <ul class="video-list">
-                    {% for video in results_by_author %}
-                    <li>
-                        <a href="/watch?v={{ video.short_id }}">
-                            <div class="thumbnail-container">
-                                {% if video.thumbnail %}
-                                <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
-                                {% else %}
-                                <div class="thumbnail"></div>
-                                {% endif %}
-                                {% if video.preview %}
-                                <video class="thumbnail-preview" muted="muted" loop playsinline preload="none" data-src="{{ url_for('videos.serve_thumbnail', filename=video.preview) }}"></video>
-                                {% endif %}
-                            </div>
-                            <div class="video-info">
-                                <span class="video-title">{{ video.title or video.filename }}</span>
-                                <div class="video-meta">
-                                    <span class="view-count">{{ video.view_count }} view{{ 's' if video.view_count != 1 else '' }}</span>
-                                    {% if video.language %}
-                                    <span class="language-badge">{{ video.language }}</span>
-                                    {% endif %}
-                                    {% if video.visibility == 'private' %}
-                                    <span class="private-badge">Private</span>
-                                    {% endif %}
-                                </div>
-                                {% if video.description %}
-                                <span class="video-description">{{ video.description }}</span>
-                                {% endif %}
-                            </div>
-                            {% if video.owner_username %}
-                            <span class="video-owner">{{ video.owner_username }}</span>
-                            {% endif %}
-                        </a>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-        {% else %}
-        <p class="empty-message">No videos found matching your search.</p>
+        <a href="/" class="btn-clear">Clear</a>
         {% endif %}
+    </form>
 
-        {% elif videos %}
+    {% if active_announcement %}
+    <div class="announcement-banner" id="announcement-{{ active_announcement.id }}">
+        <span class="announcement-icon">&#128227;</span>
+        <span class="announcement-message">{{ active_announcement.message }}</span>
+        <button class="announcement-close" onclick="dismissAnnouncement({{ active_announcement.id }})"
+            title="Dismiss">&times;</button>
+    </div>
+    {% endif %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages">
+        {% for category, message in messages %}
+        <div class="flash-message flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% if search_query %}
+    <div class="search-results-header">
+        <h2>Search results for "{{ search_query }}"</h2>
+        <p>{{ total_results }} result{{ 's' if total_results != 1 else '' }} found</p>
+    </div>
+
+    {% if total_results > 0 %}
+    {% if results_by_title %}
+    <div class="search-category">
+        <h3>By title ({{ results_by_title | length }})</h3>
         <ul class="video-list">
-            {% for video in videos %}
+            {% for video in results_by_title %}
             <li>
                 <a href="/watch?v={{ video.short_id }}">
                     <div class="thumbnail-container">
                         {% if video.thumbnail %}
-                        <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}" class="thumbnail">
+                        <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}"
+                            alt="{{ video.title }}" class="thumbnail">
                         {% else %}
                         <div class="thumbnail"></div>
                         {% endif %}
                         {% if video.preview %}
-                        <video class="thumbnail-preview" muted="muted" loop playsinline preload="none" data-src="{{ url_for('videos.serve_thumbnail', filename=video.preview) }}"></video>
+                        <video class="thumbnail-preview" muted="muted" loop playsinline preload="none"
+                            data-src="{{ url_for('videos.serve_thumbnail', filename=video.preview) }}"></video>
                         {% endif %}
                     </div>
                     <div class="video-info">
-                        <span class="video-title">{{ video.title }}</span>
+                        <span class="video-title">{{ video.title or video.filename }}</span>
                         <div class="video-meta">
-                            <span class="view-count">{{ video.view_count }} view{{ 's' if video.view_count != 1 else '' }}</span>
+                            <span class="view-count">{{ video.view_count }} view{{ 's' if video.view_count != 1 else ''
+                                }}</span>
                             {% if video.language %}
                             <span class="language-badge">{{ video.language }}</span>
                             {% endif %}
@@ -647,72 +612,209 @@
             </li>
             {% endfor %}
         </ul>
-        {% else %}
-        <p class="empty-message">No videos available.</p>
-        {% endif %}
-        <footer>RTube v{{ rtube_version }}</footer>
-        <script>
-            // Dismiss announcement (stores in sessionStorage)
-            function dismissAnnouncement(announcementId) {
-                var banner = document.getElementById('announcement-' + announcementId);
-                if (banner) {
+    </div>
+    {% endif %}
+
+    {% if results_by_description %}
+    <div class="search-category">
+        <h3>By description ({{ results_by_description | length }})</h3>
+        <ul class="video-list">
+            {% for video in results_by_description %}
+            <li>
+                <a href="/watch?v={{ video.short_id }}">
+                    <div class="thumbnail-container">
+                        {% if video.thumbnail %}
+                        <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}"
+                            alt="{{ video.title }}" class="thumbnail">
+                        {% else %}
+                        <div class="thumbnail"></div>
+                        {% endif %}
+                        {% if video.preview %}
+                        <video class="thumbnail-preview" muted="muted" loop playsinline preload="none"
+                            data-src="{{ url_for('videos.serve_thumbnail', filename=video.preview) }}"></video>
+                        {% endif %}
+                    </div>
+                    <div class="video-info">
+                        <span class="video-title">{{ video.title or video.filename }}</span>
+                        <div class="video-meta">
+                            <span class="view-count">{{ video.view_count }} view{{ 's' if video.view_count != 1 else ''
+                                }}</span>
+                            {% if video.language %}
+                            <span class="language-badge">{{ video.language }}</span>
+                            {% endif %}
+                            {% if video.visibility == 'private' %}
+                            <span class="private-badge">Private</span>
+                            {% endif %}
+                        </div>
+                        {% if video.description %}
+                        <span class="video-description">{{ video.description }}</span>
+                        {% endif %}
+                    </div>
+                    {% if video.owner_username %}
+                    <span class="video-owner">{{ video.owner_username }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if results_by_author %}
+    <div class="search-category">
+        <h3>By author ({{ results_by_author | length }})</h3>
+        <ul class="video-list">
+            {% for video in results_by_author %}
+            <li>
+                <a href="/watch?v={{ video.short_id }}">
+                    <div class="thumbnail-container">
+                        {% if video.thumbnail %}
+                        <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}"
+                            alt="{{ video.title }}" class="thumbnail">
+                        {% else %}
+                        <div class="thumbnail"></div>
+                        {% endif %}
+                        {% if video.preview %}
+                        <video class="thumbnail-preview" muted="muted" loop playsinline preload="none"
+                            data-src="{{ url_for('videos.serve_thumbnail', filename=video.preview) }}"></video>
+                        {% endif %}
+                    </div>
+                    <div class="video-info">
+                        <span class="video-title">{{ video.title or video.filename }}</span>
+                        <div class="video-meta">
+                            <span class="view-count">{{ video.view_count }} view{{ 's' if video.view_count != 1 else ''
+                                }}</span>
+                            {% if video.language %}
+                            <span class="language-badge">{{ video.language }}</span>
+                            {% endif %}
+                            {% if video.visibility == 'private' %}
+                            <span class="private-badge">Private</span>
+                            {% endif %}
+                        </div>
+                        {% if video.description %}
+                        <span class="video-description">{{ video.description }}</span>
+                        {% endif %}
+                    </div>
+                    {% if video.owner_username %}
+                    <span class="video-owner">{{ video.owner_username }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    {% else %}
+    <p class="empty-message">No videos found matching your search.</p>
+    {% endif %}
+
+    {% elif videos %}
+    <ul class="video-list">
+        {% for video in videos %}
+        <li>
+            <a href="/watch?v={{ video.short_id }}">
+                <div class="thumbnail-container">
+                    {% if video.thumbnail %}
+                    <img src="{{ url_for('videos.serve_thumbnail', filename=video.thumbnail) }}" alt="{{ video.title }}"
+                        class="thumbnail">
+                    {% else %}
+                    <div class="thumbnail"></div>
+                    {% endif %}
+                    {% if video.preview %}
+                    <video class="thumbnail-preview" muted="muted" loop playsinline preload="none"
+                        data-src="{{ url_for('videos.serve_thumbnail', filename=video.preview) }}"></video>
+                    {% endif %}
+                </div>
+                <div class="video-info">
+                    <span class="video-title">{{ video.title }}</span>
+                    <div class="video-meta">
+                        <span class="view-count">{{ video.view_count }} view{{ 's' if video.view_count != 1 else ''
+                            }}</span>
+                        {% if video.language %}
+                        <span class="language-badge">{{ video.language }}</span>
+                        {% endif %}
+                        {% if video.visibility == 'private' %}
+                        <span class="private-badge">Private</span>
+                        {% endif %}
+                    </div>
+                    {% if video.description %}
+                    <span class="video-description">{{ video.description }}</span>
+                    {% endif %}
+                </div>
+                {% if video.owner_username %}
+                <span class="video-owner">{{ video.owner_username }}</span>
+                {% endif %}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty-message">No videos available.</p>
+    {% endif %}
+    <footer>RTube v{{ rtube_version }}</footer>
+    <script>
+        // Dismiss announcement (stores in sessionStorage)
+        function dismissAnnouncement(announcementId) {
+            var banner = document.getElementById('announcement-' + announcementId);
+            if (banner) {
+                banner.style.display = 'none';
+                sessionStorage.setItem('dismissed-announcement-' + announcementId, 'true');
+            }
+        }
+
+        // Check if announcement was dismissed in this session
+        (function () {
+            var banners = document.querySelectorAll('.announcement-banner');
+            banners.forEach(function (banner) {
+                var id = banner.id.replace('announcement-', '');
+                if (sessionStorage.getItem('dismissed-announcement-' + id) === 'true') {
                     banner.style.display = 'none';
-                    sessionStorage.setItem('dismissed-announcement-' + announcementId, 'true');
                 }
+            });
+        })();
+
+        // Video preview on hover - lazy load and play
+        console.log('Initializing video previews...');
+        var containers = document.querySelectorAll('.thumbnail-container');
+        console.log('Found', containers.length, 'thumbnail containers');
+
+        containers.forEach(function (container, index) {
+            var video = container.querySelector('.thumbnail-preview');
+            if (!video) {
+                console.log('Container', index, 'has no preview video');
+                return;
             }
 
-            // Check if announcement was dismissed in this session
-            (function() {
-                var banners = document.querySelectorAll('.announcement-banner');
-                banners.forEach(function(banner) {
-                    var id = banner.id.replace('announcement-', '');
-                    if (sessionStorage.getItem('dismissed-announcement-' + id) === 'true') {
-                        banner.style.display = 'none';
-                    }
-                });
-            })();
+            console.log('Container', index, 'preview src:', video.dataset.src);
+            var loaded = false;
 
-            // Video preview on hover - lazy load and play
-            console.log('Initializing video previews...');
-            var containers = document.querySelectorAll('.thumbnail-container');
-            console.log('Found', containers.length, 'thumbnail containers');
-
-            containers.forEach(function(container, index) {
-                var video = container.querySelector('.thumbnail-preview');
-                if (!video) {
-                    console.log('Container', index, 'has no preview video');
-                    return;
+            container.addEventListener('mouseenter', function (e) {
+                console.log('Mouse enter on container', index);
+                // Lazy load the video src on first hover
+                if (!loaded && video.dataset.src) {
+                    console.log('Setting video src to:', video.dataset.src);
+                    video.src = video.dataset.src;
+                    loaded = true;
                 }
-
-                console.log('Container', index, 'preview src:', video.dataset.src);
-                var loaded = false;
-
-                container.addEventListener('mouseenter', function(e) {
-                    console.log('Mouse enter on container', index);
-                    // Lazy load the video src on first hover
-                    if (!loaded && video.dataset.src) {
-                        console.log('Setting video src to:', video.dataset.src);
-                        video.src = video.dataset.src;
-                        loaded = true;
-                    }
-                    // Play the video
-                    video.currentTime = 0;
-                    console.log('Calling play(), video.src =', video.src, 'readyState =', video.readyState);
-                    var playPromise = video.play();
-                    if (playPromise !== undefined) {
-                        playPromise.then(function() {
-                            console.log('Video', index, 'playing successfully');
-                        }).catch(function(e) {
-                            console.log('Video', index, 'play failed:', e.name, '-', e.message);
-                        });
-                    }
-                });
-
-                container.addEventListener('mouseleave', function() {
-                    video.pause();
-                    video.currentTime = 0;
-                });
+                // Play the video
+                video.currentTime = 0;
+                console.log('Calling play(), video.src =', video.src, 'readyState =', video.readyState);
+                var playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(function () {
+                        console.log('Video', index, 'playing successfully');
+                    }).catch(function (e) {
+                        console.log('Video', index, 'play failed:', e.name, '-', e.message);
+                    });
+                }
             });
-        </script>
-    </body>
+
+            container.addEventListener('mouseleave', function () {
+                video.pause();
+                video.currentTime = 0;
+            });
+        });
+    </script>
+</body>
+
 </html>

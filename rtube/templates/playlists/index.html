@@ -1,208 +1,245 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="utf-8">
-        <title>RTube - My Playlists</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                max-width: 800px;
-                margin: 0 auto;
-                padding: 20px;
-                background-color: #1a1a1a;
-                color: #fff;
-            }
-            .header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 30px;
-            }
-            .header h1 {
-                margin: 0;
-            }
-            .header-left {
-                display: flex;
-                align-items: center;
-                gap: 20px;
-            }
-            .back-link {
-                color: #888;
-                text-decoration: none;
-                font-size: 14px;
-            }
-            .back-link:hover {
-                color: #fff;
-            }
-            .btn-create {
-                padding: 10px 20px;
-                background-color: #4CAF50;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                transition: background-color 0.2s;
-            }
-            .btn-create:hover {
-                background-color: #45a049;
-            }
-            .playlist-list {
-                list-style: none;
-                padding: 0;
-                margin: 0;
-            }
-            .playlist-item {
-                background-color: #2a2a2a;
-                border-radius: 5px;
-                padding: 15px;
-                margin-bottom: 15px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .playlist-item:hover {
-                background-color: #3a3a3a;
-            }
-            .playlist-info {
-                flex: 1;
-            }
-            .playlist-info a {
-                color: #fff;
-                text-decoration: none;
-            }
-            .playlist-info a:hover {
-                color: #4CAF50;
-            }
-            .playlist-name {
-                font-size: 18px;
-                font-weight: 500;
-                margin-bottom: 5px;
-            }
-            .playlist-meta {
-                color: #888;
-                font-size: 13px;
-            }
-            .playlist-description {
-                color: #aaa;
-                font-size: 14px;
-                margin-top: 8px;
-            }
-            .playlist-actions {
-                display: flex;
-                gap: 10px;
-            }
-            .btn-edit, .btn-delete {
-                padding: 6px 12px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                cursor: pointer;
-                text-decoration: none;
-            }
-            .btn-edit {
-                background-color: #444;
-                color: white;
-            }
-            .btn-edit:hover {
-                background-color: #555;
-            }
-            .btn-delete {
-                background-color: #8B0000;
-                color: white;
-            }
-            .btn-delete:hover {
-                background-color: #a00000;
-            }
-            .empty-message {
-                color: #888;
-                font-style: italic;
-                text-align: center;
-                padding: 40px;
-            }
-            .flash-messages {
-                margin-bottom: 20px;
-            }
-            .flash-message {
-                padding: 12px;
-                border-radius: 4px;
-                margin-bottom: 10px;
-                font-size: 14px;
-            }
-            .flash-error {
-                background-color: #5c1a1a;
-                color: #ff6b6b;
-                border: 1px solid #8B0000;
-            }
-            .flash-success {
-                background-color: #1a3d1a;
-                color: #81C784;
-                border: 1px solid #2E7D32;
-            }
-            .flash-info {
-                background-color: #1a3a5c;
-                color: #6bb5ff;
-                border: 1px solid #0056b3;
-            }
-            footer {
-                margin-top: 50px;
-                padding-top: 20px;
-                border-top: 1px solid #333;
-                text-align: center;
-                color: #666;
-                font-size: 12px;
-            }
-        </style>
-        <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+<head>
+    <meta charset="utf-8">
+    <title>RTube - My Playlists</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .back-link {
+            color: #888;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .btn-create {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-create:hover {
+            background-color: #45a049;
+        }
+
+        .playlist-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .playlist-item {
+            background-color: #2a2a2a;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .playlist-item:hover {
+            background-color: #3a3a3a;
+        }
+
+        .playlist-info {
+            flex: 1;
+        }
+
+        .playlist-info a {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .playlist-info a:hover {
+            color: #4CAF50;
+        }
+
+        .playlist-name {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .playlist-meta {
+            color: #888;
+            font-size: 13px;
+        }
+
+        .playlist-description {
+            color: #aaa;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .playlist-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-edit,
+        .btn-delete {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .btn-edit {
+            background-color: #444;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background-color: #555;
+        }
+
+        .btn-delete {
+            background-color: #8B0000;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background-color: #a00000;
+        }
+
+        .empty-message {
+            color: #888;
+            font-style: italic;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+
+        .flash-message {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .flash-error {
+            background-color: #5c1a1a;
+            color: #ff6b6b;
+            border: 1px solid #8B0000;
+        }
+
+        .flash-success {
+            background-color: #1a3d1a;
+            color: #81C784;
+            border: 1px solid #2E7D32;
+        }
+
+        .flash-info {
+            background-color: #1a3a5c;
+            color: #6bb5ff;
+            border: 1px solid #0056b3;
+        }
+
+        footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 
 </head>
-    <body>
-        <div class="header">
-            <div class="header-left">
-                <a href="/" class="back-link">&larr; Back to RTube</a>
-                <h1>My Playlists</h1>
+
+<body>
+    <div class="header">
+        <div class="header-left">
+            <a href="/" class="back-link" style="display: inline-flex; align-items: center; gap: 5px;"><img
+                    src="{{ url_for('static', filename='logo_transparent.png') }}" alt="RTube" height="30"></a>
+            <h1>My Playlists</h1>
+        </div>
+        <a href="{{ url_for('playlists.create') }}" class="btn-create">Create Playlist</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages">
+        {% for category, message in messages %}
+        <div class="flash-message flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% if playlists %}
+    <ul class="playlist-list">
+        {% for playlist in playlists %}
+        <li class="playlist-item">
+            <div class="playlist-info">
+                <a href="{{ url_for('playlists.view', playlist_id=playlist.id) }}">
+                    <div class="playlist-name">{{ playlist.name }}</div>
+                </a>
+                <div class="playlist-meta">
+                    {{ playlist.video_count() }} video{{ 's' if playlist.video_count() != 1 else '' }}
+                    &bull; Updated {{ playlist.updated_at.strftime('%Y-%m-%d') }}
+                </div>
+                {% if playlist.description %}
+                <div class="playlist-description">{{ playlist.description[:100] }}{% if playlist.description|length >
+                    100 %}...{% endif %}</div>
+                {% endif %}
             </div>
-            <a href="{{ url_for('playlists.create') }}" class="btn-create">Create Playlist</a>
-        </div>
+            <div class="playlist-actions">
+                <a href="{{ url_for('playlists.edit', playlist_id=playlist.id) }}" class="btn-edit">Edit</a>
+                <form method="post" action="{{ url_for('playlists.delete', playlist_id=playlist.id) }}"
+                    style="display: inline;">
+                    <button type="submit" class="btn-delete"
+                        onclick="return confirm('Delete this playlist?')">Delete</button>
+                </form>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty-message">You don't have any playlists yet. Create one to get started!</p>
+    {% endif %}
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <div class="flash-messages">
-            {% for category, message in messages %}
-            <div class="flash-message flash-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        {% endwith %}
+    <footer>RTube v{{ rtube_version }}</footer>
+</body>
 
-        {% if playlists %}
-        <ul class="playlist-list">
-            {% for playlist in playlists %}
-            <li class="playlist-item">
-                <div class="playlist-info">
-                    <a href="{{ url_for('playlists.view', playlist_id=playlist.id) }}">
-                        <div class="playlist-name">{{ playlist.name }}</div>
-                    </a>
-                    <div class="playlist-meta">
-                        {{ playlist.video_count() }} video{{ 's' if playlist.video_count() != 1 else '' }}
-                        &bull; Updated {{ playlist.updated_at.strftime('%Y-%m-%d') }}
-                    </div>
-                    {% if playlist.description %}
-                    <div class="playlist-description">{{ playlist.description[:100] }}{% if playlist.description|length > 100 %}...{% endif %}</div>
-                    {% endif %}
-                </div>
-                <div class="playlist-actions">
-                    <a href="{{ url_for('playlists.edit', playlist_id=playlist.id) }}" class="btn-edit">Edit</a>
-                    <form method="post" action="{{ url_for('playlists.delete', playlist_id=playlist.id) }}" style="display: inline;">
-                        <button type="submit" class="btn-delete" onclick="return confirm('Delete this playlist?')">Delete</button>
-                    </form>
-                </div>
-            </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p class="empty-message">You don't have any playlists yet. Create one to get started!</p>
-        {% endif %}
-
-        <footer>RTube v{{ rtube_version }}</footer>
-    </body>
 </html>

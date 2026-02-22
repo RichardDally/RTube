@@ -184,7 +184,15 @@
 </head>
 
 <body>
-    <h1>Encoding</h1>
+    <div class="header"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div class="header-left" style="display: flex; align-items: center; gap: 20px;">
+            <a href="/" class="back-link"
+                style="display: inline-flex; align-items: center; gap: 5px; margin-bottom: 0;"><img
+                    src="{{ url_for('static', filename='logo_transparent.png') }}" alt="RTube" height="30"></a>
+            <h1 style="margin: 0;">Encoding</h1>
+        </div>
+    </div>
     <p class="video-title">{{ job.video.title }}</p>
 
     <div class="progress-container">

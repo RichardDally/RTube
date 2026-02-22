@@ -179,7 +179,7 @@
     <body>
         <div class="header">
             <div class="header-top">
-                <a href="/" class="back-link">&larr; Back to RTube</a>
+                <a href="/" class="back-link" style="display: inline-flex; align-items: center; gap: 5px;">&larr; Back to <img src="{{ url_for('static', filename='logo_transparent.png') }}" alt="RTube" height="20"></a>
             </div>
             <h1>{{ playlist.name }}</h1>
             <div class="playlist-meta">

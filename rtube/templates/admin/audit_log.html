@@ -279,7 +279,7 @@
     <body>
         <div class="header">
             <div class="header-left">
-                <a href="/" class="back-link">&larr; Back to RTube</a>
+                <a href="/" class="back-link" style="display: inline-flex; align-items: center; gap: 5px;"><img src="{{ url_for('static', filename='logo_transparent.png') }}" alt="RTube" height="30"></a>
                 <h1>Audit Log</h1>
                 <span class="log-count">{{ pagination.total }} entr{{ 'ies' if pagination.total != 1 else 'y' }}</span>
             </div>

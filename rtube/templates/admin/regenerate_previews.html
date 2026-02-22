@@ -216,7 +216,7 @@
     <body>
         <div class="header">
             <div class="header-left">
-                <a href="/" class="back-link">&larr; Back to RTube</a>
+                <a href="/" class="back-link" style="display: inline-flex; align-items: center; gap: 5px;"><img src="{{ url_for('static', filename='logo_transparent.png') }}" alt="RTube" height="30"></a>
                 <h1>Regenerate Previews</h1>
             </div>
             <span class="video-count">{{ videos | length }} video{{ 's' if videos | length != 1 else '' }} missing preview{{ 's' if videos | length != 1 else '' }}</span>

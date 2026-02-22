@@ -2,6 +2,7 @@ recursive-include rtube/templates *.html
 include rtube/static/js/*.js
 include rtube/static/favicon.ico
 include rtube/static/favicon.png
+include rtube/static/logo_transparent.png
 include rtube/static/package.json
 include rtube/static/package-lock.json
 prune rtube/static/node_modules
