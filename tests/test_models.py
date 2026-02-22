@@ -204,15 +204,15 @@ class TestUserModel:
             assert admin.is_admin() is True
             assert admin.is_uploader() is True  # Admins can also upload
 
-    def test_default_role_is_uploader(self, app):
-        """Test that default role is uploader."""
+    def test_default_role_is_viewer(self, app):
+        """Test that default role is viewer."""
         with app.app_context():
             user = User(username="defaultrole")
             user.set_password("Test123!")
             db.session.add(user)
             db.session.commit()
 
-            assert user.role == UserRole.UPLOADER.value
+            assert user.role == UserRole.VIEWER.value
 
 
 class TestPasswordValidation:

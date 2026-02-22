@@ -77,7 +77,7 @@ class TestRegisterRoute:
         with app.app_context():
             user = User.query.filter_by(username='newuser').first()
             assert user is not None
-            assert user.role == UserRole.UPLOADER.value
+            assert user.role == UserRole.VIEWER.value
 
     def test_register_password_mismatch(self, client):
         """Test registration with mismatched passwords."""
