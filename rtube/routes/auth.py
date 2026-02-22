@@ -186,12 +186,15 @@ def register():
         # Create user
         user = User(username=username)
         user.set_password(password)
+        user.last_login = datetime.utcnow()
         db.session.add(user)
         db.session.commit()
+        
+        login_user(user)
 
-        current_app.logger.info(f"New user '{username}' registered successfully")
-        flash("Account created successfully. Please log in.", "success")
-        return redirect(url_for('auth.login'))
+        current_app.logger.info(f"New user '{username}' registered and logged in successfully")
+        flash("Account created successfully. You are now logged in.", "success")
+        return redirect(url_for('videos.index'))
 
     return render_template('auth/register.html')
 
