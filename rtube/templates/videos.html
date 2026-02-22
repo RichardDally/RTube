@@ -481,6 +481,35 @@
             transition: color 0.2s;
         }
 
+        /* Admin warning banner */
+        .admin-warning-banner {
+            background: linear-gradient(135deg, #E65100 0%, #FF9800 100%);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .admin-warning-banner .warning-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .admin-warning-banner .warning-message {
+            flex: 1;
+        }
+
+        .admin-warning-banner a {
+            color: #fff;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+
         .announcement-banner .announcement-close:hover {
             color: #fff;
         }
@@ -550,6 +579,14 @@
         <span class="announcement-message">{{ active_announcement.message }}</span>
         <button class="announcement-close" onclick="dismissAnnouncement({{ active_announcement.id }})"
             title="Dismiss">&times;</button>
+    </div>
+    {% endif %}
+
+    {% if has_default_admin_password %}
+    <div class="admin-warning-banner">
+        <span class="warning-icon">&#9888;</span>
+        <span class="warning-message">Warning: You are using the default admin password. Please change it immediately in
+            your <a href="{{ url_for('admin.change_password') }}">profile settings</a>.</span>
     </div>
     {% endif %}
 

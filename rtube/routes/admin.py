@@ -2,7 +2,7 @@ import logging
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
-from flask import Blueprint, render_template, abort, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, abort, request, redirect, url_for, flash, current_app, session
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
@@ -116,6 +116,7 @@ def change_password():
         # Update password
         current_user.set_password(new_password)
         db.session.commit()
+        session.pop('has_default_admin_password', None)
         logger.info(f"Admin user '{current_user.username}' changed their password")
 
         # Audit log

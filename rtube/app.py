@@ -304,15 +304,26 @@ def create_app(test_config=None):
             # Filter out expired announcements
             if active_announcement and active_announcement.is_expired():
                 active_announcement = None
+
+            # Check default admin password efficiently (cache in session)
+            has_default_admin_password = False
+            if current_user.is_authenticated and current_user.is_admin():
+                from flask import session
+                if 'has_default_admin_password' not in session:
+                    session['has_default_admin_password'] = current_user.has_default_password()
+                has_default_admin_password = session.get('has_default_admin_password', False)
+
         except Exception:
             # If DB is down or other error, fail gracefully so 500 page can render
             active_announcement = None
+            has_default_admin_password = False
 
         return {
             "rtube_version": rtube.__version__,
             "oidc_enabled": app.config.get("OIDC_ENABLED", False),
             "enable_registration": app.config.get("ENABLE_REGISTRATION", True),
             "active_announcement": active_announcement,
+            "has_default_admin_password": has_default_admin_password,
         }
 
     # Custom Jinja2 filter to convert URLs to clickable links
