@@ -54,6 +54,7 @@ def _log_configuration(app):
     app.logger.info(f"  Keep original video: {app.config.get('KEEP_ORIGINAL_VIDEO')}")
     app.logger.info(f"  Max upload size: {app.config.get('MAX_CONTENT_LENGTH', 0) / (1024 * 1024 * 1024):.1f} GB")
     app.logger.info(f"  OIDC enabled: {app.config.get('OIDC_ENABLED', False)}")
+    app.logger.info(f"  Registration enabled: {app.config.get('ENABLE_REGISTRATION', True)}")
     app.logger.info("=" * 60)
 
     # Check if node_modules exists in static folder
@@ -195,6 +196,21 @@ def create_app(test_config=None):
     else:
         app.config["OIDC_ENABLED"] = False
 
+    # Registration configuration
+    raw_enable_reg = os.environ.get("RTUBE_ENABLE_REGISTRATION", "False")
+    enable_registration = raw_enable_reg.lower() in ("true", "1", "yes")
+
+    if app.config.get("OIDC_ENABLED") and enable_registration:
+        # If the user explicitly set RTUBE_ENABLE_REGISTRATION to True
+        # while OIDC is enabled, log a warning instead of failing.
+        if "RTUBE_ENABLE_REGISTRATION" in os.environ and raw_enable_reg.lower() in ("true", "1", "yes"):
+            app.logger.warning("Both OIDC_ENABLED and RTUBE_ENABLE_REGISTRATION are set to True. This configuration is incompatible. Forcing registration to False.")
+        
+        # Always force to False when OIDC is enabled
+        enable_registration = False
+
+    app.config["ENABLE_REGISTRATION"] = enable_registration
+
     # Media storage paths (within instance folder)
     app.config["VIDEOS_FOLDER"] = str(Path(app.instance_path) / "videos")
     app.config["THUMBNAILS_FOLDER"] = str(Path(app.instance_path) / "thumbnails")
@@ -295,6 +311,7 @@ def create_app(test_config=None):
         return {
             "rtube_version": rtube.__version__,
             "oidc_enabled": app.config.get("OIDC_ENABLED", False),
+            "enable_registration": app.config.get("ENABLE_REGISTRATION", True),
             "active_announcement": active_announcement,
         }
 

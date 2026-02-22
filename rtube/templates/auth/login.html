@@ -1,202 +1,228 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="utf-8">
-        <title>RTube - Login</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                max-width: 400px;
-                margin: 0 auto;
-                padding: 20px;
-                background-color: #1a1a1a;
-                color: #fff;
-                min-height: 100vh;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-            }
-            h1 {
-                text-align: center;
-                margin-bottom: 30px;
-            }
-            .form-group {
-                margin-bottom: 20px;
-            }
-            label {
-                display: block;
-                margin-bottom: 8px;
-                font-weight: bold;
-            }
-            input[type="text"],
-            input[type="password"] {
-                width: 100%;
-                padding: 12px;
-                border: 1px solid #444;
-                border-radius: 5px;
-                background-color: #2a2a2a;
-                color: #fff;
-                box-sizing: border-box;
-                font-size: 16px;
-            }
-            input[type="text"]:focus,
-            input[type="password"]:focus {
-                outline: none;
-                border-color: #4CAF50;
-            }
-            button[type="submit"] {
-                width: 100%;
-                padding: 15px;
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                font-size: 16px;
-                cursor: pointer;
-                transition: background-color 0.2s;
-            }
-            button[type="submit"]:hover {
-                background-color: #45a049;
-            }
-            .error {
-                background-color: #ff4444;
-                color: white;
-                padding: 10px;
-                border-radius: 5px;
-                margin-bottom: 20px;
-                text-align: center;
-            }
-            .success {
-                background-color: #4CAF50;
-                color: white;
-                padding: 10px;
-                border-radius: 5px;
-                margin-bottom: 20px;
-                text-align: center;
-            }
-            .warning {
-                background-color: #f0ad4e;
-                color: #333;
-                padding: 10px;
-                border-radius: 5px;
-                margin-bottom: 20px;
-                text-align: center;
-            }
-            .links {
-                text-align: center;
-                margin-top: 20px;
-            }
-            .links a {
-                color: #888;
-                text-decoration: none;
-            }
-            .links a:hover {
-                color: #fff;
-            }
-            .back-link {
-                display: block;
-                text-align: center;
-                margin-top: 30px;
-                color: #888;
-                text-decoration: none;
-            }
-            .back-link:hover {
-                color: #fff;
-            }
-            .sso-divider {
-                display: flex;
-                align-items: center;
-                text-align: center;
-                margin: 25px 0;
-                color: #888;
-            }
-            .sso-divider::before,
-            .sso-divider::after {
-                content: '';
-                flex: 1;
-                border-bottom: 1px solid #444;
-            }
-            .sso-divider span {
-                padding: 0 15px;
-            }
-            .sso-buttons {
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-                margin-bottom: 20px;
-            }
-            .sso-button {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 12px 20px;
-                border-radius: 5px;
-                text-decoration: none;
-                font-size: 14px;
-                font-weight: bold;
-                transition: background-color 0.2s, transform 0.1s;
-            }
-            .sso-button:hover {
-                transform: translateY(-1px);
-            }
-            .sso-button.oidc {
-                background-color: #5865F2;
-                color: white;
-            }
-            .sso-button.oidc:hover {
-                background-color: #4752c4;
-            }
-        </style>
-        <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+<head>
+    <meta charset="utf-8">
+    <title>RTube - Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: #2a2a2a;
+            color: #fff;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        .error {
+            background-color: #ff4444;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .success {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .warning {
+            background-color: #f0ad4e;
+            color: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .links a {
+            color: #888;
+            text-decoration: none;
+        }
+
+        .links a:hover {
+            color: #fff;
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 30px;
+            color: #888;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .sso-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 25px 0;
+            color: #888;
+        }
+
+        .sso-divider::before,
+        .sso-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #444;
+        }
+
+        .sso-divider span {
+            padding: 0 15px;
+        }
+
+        .sso-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .sso-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .sso-button:hover {
+            transform: translateY(-1px);
+        }
+
+        .sso-button.oidc {
+            background-color: #5865F2;
+            color: white;
+        }
+
+        .sso-button.oidc:hover {
+            background-color: #4752c4;
+        }
+    </style>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 
 </head>
-    <body>
-        <div>
-            <h1>RTube Login</h1>
 
-            {% if error %}
-            <div class="error">{{ error }}</div>
-            {% endif %}
+<body>
+    <div>
+        <h1>RTube Login</h1>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                    <div class="{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
 
-            {% if oidc_enabled %}
-            <div class="sso-buttons">
-                <a href="{{ url_for('auth.oidc_login') }}" class="sso-button oidc">
-                    Sign in with SSO (OIDC)
-                </a>
-            </div>
-            <div class="sso-divider"><span>or continue with credentials</span></div>
-            {% endif %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="{{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
 
-            <form method="post">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required autocomplete="username" autofocus>
-                </div>
-
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required autocomplete="current-password">
-                </div>
-
-                <button type="submit">Login</button>
-            </form>
-
-            {% if not oidc_enabled %}
-            <div class="links">
-                <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Register</a></p>
-            </div>
-            {% endif %}
-
-            <a href="{{ url_for('videos.index') }}" class="back-link">&larr; Back to videos</a>
+        {% if oidc_enabled %}
+        <div class="sso-buttons">
+            <a href="{{ url_for('auth.oidc_login') }}" class="sso-button oidc">
+                Sign in with SSO (OIDC)
+            </a>
         </div>
-    </body>
+        <div class="sso-divider"><span>or continue with credentials</span></div>
+        {% endif %}
+
+        <form method="post">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autocomplete="username" autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+
+            <button type="submit">Login</button>
+        </form>
+
+        {% if enable_registration %}
+        <div class="links">
+            <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Register</a></p>
+        </div>
+        {% endif %}
+
+        <a href="{{ url_for('videos.index') }}" class="back-link">&larr; Back to videos</a>
+    </div>
+</body>
+
 </html>

@@ -153,10 +153,9 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('videos.index'))
 
-    # Disable registration when OIDC is enabled
-    oidc_enabled = current_app.config.get("OIDC_ENABLED", False)
-    if oidc_enabled:
-        flash("Registration is disabled. Please use SSO to sign in.", "error")
+    # Disable registration when ENABLE_REGISTRATION is False
+    if not current_app.config.get("ENABLE_REGISTRATION", True):
+        flash("Registration is disabled.", "error")
         return redirect(url_for('auth.login'))
 
     if request.method == 'POST':

@@ -142,6 +142,7 @@ The button provides visual feedback when the URL is copied. Shared timestamp lin
 | `RTUBE_OIDC_USERNAME_CLAIM` | Claim to use for username | `preferred_username` |
 | `RTUBE_OIDC_REDIRECT_URI` | Redirect URI for OIDC callback | `http://127.0.0.1:5000/auth/oidc/callback` |
 | `REQUESTS_CA_BUNDLE` | Path to custom CA certificate bundle for OIDC provider (standard Python env var) | System CA bundle |
+| `RTUBE_ENABLE_REGISTRATION` | Enable local user registration (`true`, `1`, or `yes`) | `false` |
 
 ## Authentication
 

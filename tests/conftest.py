@@ -7,6 +7,7 @@ import pytest
 
 # Set testing environment before importing app
 os.environ["TESTING"] = "true"
+os.environ["RTUBE_ENABLE_REGISTRATION"] = "true"
 
 from rtube.app import create_app
 from rtube.models import db, Video
