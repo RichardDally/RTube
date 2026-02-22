@@ -196,6 +196,28 @@
     <p class="video-title">{{ job.video.title }}</p>
 
     <div class="progress-container">
+        <div id="sub-steps" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+            <div id="step-thumbnail" class="hidden"
+                style="display: flex; justify-content: space-between; align-items: center; background: #333; padding: 10px; border-radius: 5px;">
+                <span>Thumbnail Generation</span>
+                <span class="status-badge status-pending" id="badge-thumbnail"
+                    style="min-width: 80px; text-align: center;">Pending</span>
+            </div>
+            <div id="step-preview" class="hidden"
+                style="display: flex; justify-content: space-between; align-items: center; background: #333; padding: 10px; border-radius: 5px;">
+                <span>Preview Video Generation</span>
+                <span class="status-badge status-pending" id="badge-preview"
+                    style="min-width: 80px; text-align: center;">Pending</span>
+            </div>
+            <div id="step-sprite" class="hidden"
+                style="display: flex; justify-content: space-between; align-items: center; background: #333; padding: 10px; border-radius: 5px;">
+                <span>Hover Sprite Compilation</span>
+                <span class="status-badge status-pending" id="badge-sprite"
+                    style="min-width: 80px; text-align: center;">Pending</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 10px; color: #aaa;">Main Video Encoding</div>
         <div class="progress-bar-wrapper">
             <div class="progress-bar" id="progress-bar"></div>
         </div>
@@ -204,7 +226,7 @@
         </div>
         <div class="status-info">
             <span>
-                <span class="status-badge status-{{ job.status }}" id="status-badge">
+                <span class="status-badge status-{{ job.status }}" id="badge-encoding">
                     <span class="spinner" id="spinner"></span>
                     <span class="checkmark hidden" id="checkmark">✓</span>
                     <span id="status-text">{{ job.status }}</span>
@@ -233,7 +255,7 @@
         const jobId = {{ job.id }};
         const progressBar = document.getElementById('progress-bar');
         const progressPercent = document.getElementById('progress-percent');
-        const statusBadge = document.getElementById('status-badge');
+        const badgeEncoding = document.getElementById('badge-encoding');
         const statusText = document.getElementById('status-text');
         const timeLeft = document.getElementById('time-left');
         const spinner = document.getElementById('spinner');
@@ -247,14 +269,28 @@
             return Math.floor(seconds / 3600) + 'h ' + Math.floor((seconds % 3600) / 60) + 'm';
         }
 
+        function updateSubStep(id, hasFeature, stepStatus) {
+            if (hasFeature) {
+                document.getElementById('step-' + id).classList.remove('hidden');
+                const badge = document.getElementById('badge-' + id);
+                badge.className = 'status-badge status-' + stepStatus;
+                badge.textContent = stepStatus;
+            }
+        }
+
         function updateStatus(data) {
             progressBar.style.width = data.progress + '%';
             progressPercent.textContent = data.progress;
 
-            statusBadge.className = 'status-badge status-' + data.status;
-            statusText.textContent = data.status;
+            // Update sub-steps
+            updateSubStep('thumbnail', data.has_thumbnail, data.step_thumbnail);
+            updateSubStep('preview', data.has_preview, data.step_preview);
+            updateSubStep('sprite', data.has_sprite, data.step_sprite);
 
-            if (data.time_left !== undefined) {
+            badgeEncoding.className = 'status-badge status-' + data.step_encoding;
+            statusText.textContent = data.step_encoding || data.status;
+
+            if (data.time_left !== undefined && data.time_left !== null) {
                 timeLeft.textContent = 'Time remaining: ' + formatTime(data.time_left);
             }
 
@@ -263,9 +299,13 @@
                 checkmark.classList.remove('hidden');
                 watchBtn.classList.remove('hidden');
                 timeLeft.textContent = 'Done!';
+                badgeEncoding.className = 'status-badge status-completed';
+                statusText.textContent = 'completed';
             } else if (data.status === 'failed') {
                 spinner.classList.add('hidden');
                 checkmark.classList.add('hidden');
+                badgeEncoding.className = 'status-badge status-failed';
+                statusText.textContent = 'failed';
                 if (data.error) {
                     errorMessage.textContent = 'Error: ' + data.error;
                     errorMessage.classList.remove('hidden');

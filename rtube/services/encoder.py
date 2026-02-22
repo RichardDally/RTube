@@ -417,20 +417,44 @@ class EncoderService:
             job.status = "encoding"
             db.session.commit()
 
-        self._progress[job_id] = {"progress": 0, "status": "encoding"}
+        # Initialize progress dict with granular step tracking
+        progress_dict = {
+            "progress": 0,
+            "status": "encoding",
+            "has_thumbnail": bool(thumbnail_path),
+            "step_thumbnail": "pending" if thumbnail_path else "completed",
+            "has_preview": bool(preview_path),
+            "step_preview": "pending" if preview_path else "completed",
+            "has_sprite": bool(sprite_path),
+            "step_sprite": "pending" if sprite_path else "completed",
+            "step_encoding": "pending"
+        }
+        self._progress[job_id] = progress_dict.copy()
 
         try:
             # Generate thumbnail before encoding
             if thumbnail_path:
+                progress_dict["step_thumbnail"] = "processing"
+                self._progress[job_id] = progress_dict.copy()
                 self._generate_thumbnail(input_path, thumbnail_path)
+                progress_dict["step_thumbnail"] = "completed"
+                self._progress[job_id] = progress_dict.copy()
 
             # Generate preview video before encoding
             if preview_path:
+                progress_dict["step_preview"] = "processing"
+                self._progress[job_id] = progress_dict.copy()
                 self._generate_preview(input_path, preview_path)
+                progress_dict["step_preview"] = "completed"
+                self._progress[job_id] = progress_dict.copy()
                 
             # Generate sprite sheet before encoding
             if sprite_path:
+                progress_dict["step_sprite"] = "processing"
+                self._progress[job_id] = progress_dict.copy()
                 self._generate_sprite(input_path, sprite_path)
+                progress_dict["step_sprite"] = "completed"
+                self._progress[job_id] = progress_dict.copy()
 
             video = ffmpeg_streaming.input(str(input_path))
             hls = video.hls(Formats.h264())
@@ -440,15 +464,29 @@ class EncoderService:
                 representations = [QUALITY_PRESETS["360p"]]
 
             hls.representations(*representations)
+            
+            progress_dict["step_encoding"] = "processing"
+            self._progress[job_id] = progress_dict.copy()
 
             def monitor(ffmpeg, duration, time_, time_left, process):
                 if duration > 0:
-                    progress = min(round(time_ / duration * 100), 100)
-                    self._progress[job_id] = {"progress": progress, "status": "encoding", "time_left": int(time_left)}
+                    prog = min(round(time_ / duration * 100), 100)
+                    progress_dict["progress"] = prog
+                    if time_left is not None:
+                        try:
+                            progress_dict["time_left"] = int(time_left)
+                        except (ValueError, TypeError):
+                            pass
+                    self._progress[job_id] = progress_dict.copy()
 
             logger.info(f"Starting encoding job {job_id}")
-            # This contains an error inside, investigate later...
+            # Fixed the bug here where the monitor callback overwrote the entire dictionary, dropping metadata
             hls.output(str(output_path), monitor=monitor)
+            
+            progress_dict["step_encoding"] = "completed"
+            progress_dict["progress"] = 100
+            progress_dict["status"] = "completed"
+            self._progress[job_id] = progress_dict.copy()
 
             with self.app.app_context():
                 job = db.session.get(EncodingJob, job_id)
@@ -457,7 +495,6 @@ class EncoderService:
                 job.completed_at = datetime.utcnow()
                 db.session.commit()
 
-            self._progress[job_id] = {"progress": 100, "status": "completed"}
             logger.info(f"Encoding job {job_id} completed")
 
             # Delete original MP4 file if requested
@@ -475,7 +512,10 @@ class EncoderService:
                 job.status = "failed"
                 job.error_message = str(e)
                 db.session.commit()
-            self._progress[job_id] = {"progress": 0, "status": "failed", "error": str(e)}
+            
+            progress_dict["status"] = "failed"
+            progress_dict["error"] = str(e)
+            self._progress[job_id] = progress_dict.copy()
 
 
 encoder_service = EncoderService()
