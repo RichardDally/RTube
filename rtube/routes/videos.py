@@ -251,13 +251,23 @@ def watch_video():
     if sort_order not in ('newest', 'oldest'):
         sort_order = 'newest'
 
+    # Build videojs-markers structure if chapters exist
+    markers_data = []
+    if video.chapters:
+        for chapter in video.chapters:
+            markers_data.append({
+                "time": chapter.start_time,
+                "text": chapter.title,
+                "class": "blue-marker"
+            })
+
     video_url = url_for('videos.serve_video', filename=f"{video.filename}.m3u8")
     logger.info(f"Loading video from [{video_url}]")
     return render_template(
         'index.html',
         filename=video.title or video.filename,
         video_url=video_url,
-        markers=None,
+        markers=markers_data,
         view_count=video.view_count,
         description=video.description,
         video=video,
@@ -266,6 +276,61 @@ def watch_video():
         recommended_videos=recommended_videos,
         current_sort=sort_order,
     )
+
+
+@videos_bp.route('/watch/vtt/<short_id>.vtt')
+def chapters_vtt(short_id):
+    """Dynamically generate a WebVTT file for video chapters."""
+    from flask import Response
+    
+    video = Video.query.filter(db.func.lower(Video.short_id) == short_id.lower()).first()
+    if not video or not video.chapters:
+        return Response("WEBVTT\n\n", mimetype='text/vtt')
+
+    # Private videos require authentication
+    if video.is_private() and not current_user.is_authenticated:
+        return Response("WEBVTT\n\n", mimetype='text/vtt')
+
+    lines = ["WEBVTT", ""]
+    
+    chapters = video.chapters
+    num_chapters = len(chapters)
+    
+    for i in range(num_chapters):
+        current_chapter = chapters[i]
+        
+        # Calculate current chapter's start string
+        start_ms = current_chapter.start_time * 1000
+        start_hours, rem = divmod(start_ms, 3600000)
+        start_mins, rem = divmod(rem, 60000)
+        start_secs, start_msecs = divmod(rem, 1000)
+        start_str = f"{start_hours:02d}:{start_mins:02d}:{start_secs:02d}.{start_msecs:03d}"
+        
+        # Determine current chapter's end timestamp
+        if i + 1 < num_chapters:
+            next_chapter = chapters[i + 1]
+            end_ms = int(next_chapter.start_time * 1000)
+        elif video.watch_history and video.watch_history[0].duration:
+            # Use duration if available
+            end_ms = int(video.watch_history[0].duration * 1000)
+        else:
+            # Arbitrarily large end time for the final chapter if duration is unknown
+            end_ms = 86399999 # 23:59:59.999
+            
+        end_hours, rem = divmod(end_ms, 3600000)
+        end_mins, rem = divmod(rem, 60000)
+        end_secs, end_msecs = divmod(rem, 1000)
+        end_str = f"{int(end_hours):02d}:{int(end_mins):02d}:{int(end_secs):02d}.{int(end_msecs):03d}"
+        
+        lines.append(f"{start_str} --> {end_str}")
+        lines.append(current_chapter.title)
+        lines.append("")
+
+    response = Response("\n".join(lines), mimetype='text/vtt')
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 
 @videos_bp.route('/watch/comment', methods=['POST'])

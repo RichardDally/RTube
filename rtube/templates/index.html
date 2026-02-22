@@ -967,6 +967,12 @@
         body.theater-mode .watch-sidebar {
             display: none;
         }
+
+        /* Video.js chapter markers customization */
+        .blue-marker {
+            background-color: #2196F3 !important;
+            border-radius: 50% !important;
+        }
     </style>
     <script>
         var filename = '{{ filename }}'
@@ -985,7 +991,8 @@
 
 <body>
     <div class="header">
-        <a href="/" style="display: flex; align-items: center;"><img src="{{ url_for('static', filename='logo_transparent.png') }}" alt="RTube" height="30"></a>
+        <a href="/" style="display: flex; align-items: center;"><img
+                src="{{ url_for('static', filename='logo_transparent.png') }}" alt="RTube" height="30"></a>
     </div>
     <div class="watch-layout">
         <div class="watch-main">
@@ -993,6 +1000,10 @@
                 <h1 class="video-title">{{ filename }}</h1>
                 <video-js id="RPlayer" class="vjs-default-skin" controls preload="auto" width="1280" height="720">
                     <source src="{{ video_url }}" type="application/x-mpegURL">
+                    {% if video and video.chapters %}
+                    <track kind="chapters" src="{{ url_for('videos.chapters_vtt', short_id=video.short_id) }}"
+                        srclang="en" label="Chapters" default>
+                    {% endif %}
                     <p class="video-fallback">Your browser doesn't support video tag or Video.js failed to load.</p>
                 </video-js>
                 <div class="video-meta">

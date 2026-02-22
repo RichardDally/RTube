@@ -115,6 +115,48 @@ class TestWatchVideoRoute:
         assert b'/watch?v=nonexistent1234' in response.data
 
 
+class TestWatchVttRoute:
+    """Tests for the watch dynamic WebVTT route for chapters."""
+
+    def test_watch_vtt_no_chapters(self, client, sample_video):
+        """Test generating VTT for a video without chapters returns an empty WEBVTT file."""
+        response = client.get(f'/watch/vtt/{sample_video["short_id"]}.vtt')
+        assert response.status_code == 200
+        assert response.mimetype == 'text/vtt'
+        assert response.data == b"WEBVTT\n\n"
+
+    def test_watch_vtt_with_chapters(self, client, sample_video, app):
+        """Test generating VTT for a video with chapters correctly formats time and headers."""
+        from rtube.models import VideoChapter
+        
+        with app.app_context():
+            video = Video.query.get(sample_video["id"])
+            chapter1 = VideoChapter(video_id=video.id, title="Intro", start_time=0)
+            chapter2 = VideoChapter(video_id=video.id, title="Middle", start_time=65) # 1m 5s
+            db.session.add(chapter1)
+            db.session.add(chapter2)
+            db.session.commit()
+
+        response = client.get(f'/watch/vtt/{sample_video["short_id"]}.vtt')
+        assert response.status_code == 200
+        assert response.mimetype == 'text/vtt'
+        vtt_data = response.data.decode('utf-8')
+        
+        assert "WEBVTT" in vtt_data
+        assert "00:00:00.000 --> 00:01:05.000" in vtt_data
+        assert "Intro" in vtt_data
+        assert "00:01:05.000 --> 23:59:59.999" in vtt_data
+        assert "Middle" in vtt_data
+
+    def test_watch_vtt_private_video_forbidden(self, client, sample_private_video):
+        """Test generating VTT for a private video blocks access for unauthenticated users."""
+        response = client.get(f'/watch/vtt/{sample_private_video["short_id"]}.vtt')
+        assert response.status_code == 200
+        assert response.mimetype == 'text/vtt'
+        # Private videos emit an empty VTT file when unauthenticated to prevent data leak
+        assert response.data == b"WEBVTT\n\n"
+
+
 class TestCommentRoute:
     """Tests for the comment posting route."""
 

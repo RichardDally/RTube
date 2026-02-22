@@ -132,7 +132,7 @@ player.markers({
         display: true
     },
     breakOverlay: {
-        display: true,
+        display: false,
         displayTime: 3,
         style: {
             'width': '100%',
