@@ -26,7 +26,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default=UserRole.UPLOADER.value)
+    role = db.Column(db.String(20), nullable=False, default=UserRole.VIEWER.value)
     auth_type = db.Column(db.String(10), nullable=False, default='local')  # 'local' or 'sso'
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     last_login = db.Column(db.DateTime, nullable=True)

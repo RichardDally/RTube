@@ -81,7 +81,7 @@ def oidc_callback():
             # Create new user
             user = User(
                 username=username,
-                role=UserRole.UPLOADER.value,
+                role=UserRole.VIEWER.value,
             )
             # Set a random password (user won't use it, they'll use OIDC)
             import secrets
@@ -185,7 +185,7 @@ def register():
             return render_template('auth/register.html', error=password_errors[0], username=username)
 
         # Create user
-        user = User(username=username)
+        user = User(username=username, role=UserRole.VIEWER.value)
         user.set_password(password)
         user.last_login = datetime.utcnow()
         db.session.add(user)
