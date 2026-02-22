@@ -216,8 +216,11 @@ def create_app(test_config=None):
     app.config["THUMBNAILS_FOLDER"] = str(Path(app.instance_path) / "thumbnails")
 
     # Create media directories if they don't exist
-    Path(app.config["VIDEOS_FOLDER"]).mkdir(parents=True, exist_ok=True)
-    Path(app.config["THUMBNAILS_FOLDER"]).mkdir(parents=True, exist_ok=True)
+    videos_path = Path(app.config["VIDEOS_FOLDER"])
+    videos_path.mkdir(parents=True, exist_ok=True)
+
+    thumbnails_path = Path(app.config["THUMBNAILS_FOLDER"])
+    thumbnails_path.mkdir(parents=True, exist_ok=True)
 
     # Log configuration at startup (redact secrets)
     if not is_testing:

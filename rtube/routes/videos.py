@@ -262,11 +262,17 @@ def watch_video():
             })
 
     video_url = url_for('videos.serve_video', filename=f"{video.filename}.m3u8")
+    sprite_path = Path(current_app.config["THUMBNAILS_FOLDER"]) / f"{video.filename}_sprite.jpg"
+    sprite_url = None
+    if sprite_path.exists():
+        sprite_url = url_for('videos.serve_thumbnail', filename=f'{video.filename}_sprite.jpg')
+
     logger.info(f"Loading video from [{video_url}]")
     return render_template(
         'index.html',
         filename=video.title or video.filename,
         video_url=video_url,
+        sprite_url=sprite_url,
         markers=markers_data,
         view_count=video.view_count,
         description=video.description,

@@ -144,3 +144,15 @@ player.markers({
     },
     markers: mymarkers
 });
+
+// Initialize sprite thumbnails if a sprite URL is provided
+if (typeof spriteUrl !== 'undefined' && spriteUrl) {
+    player.spriteThumbnails({
+        url: spriteUrl,
+        width: 160,
+        height: 90,
+        columns: 10,
+        interval: 10,
+        downlink: 0
+    });
+}

@@ -9,7 +9,8 @@
     "videojs-contrib-quality-levels": "^2.2.1",
     "videojs-hls-quality-selector": "^1.1.4",
     "videojs-hotkeys": "^0.2.30",
-    "videojs-markers": "^1.0.1"
+    "videojs-markers": "^1.0.1",
+    "videojs-sprite-thumbnails": "^1.2.1"
   },
   "main": "video-player.js",
   "scripts": {
@@ -21,6 +22,9 @@
   "overrides": {
     "minimatch": "^10.2.1",
     "rimraf": "^6.0.0",
-    "glob": "^11.0.0"
+    "glob": "^11.0.0",
+    "videojs-markers": {
+      "video.js": "$video.js"
+    }
   }
 }

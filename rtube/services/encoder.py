@@ -36,23 +36,39 @@ class EncoderService:
     def get_progress(self, job_id: int) -> dict:
         return self._progress.get(job_id, {"progress": 0, "status": "pending"})
 
-    def encode_video(self, job_id: int, input_path: Path, output_path: Path, qualities: list[str], delete_original: bool = True, thumbnail_path: Path = None, preview_path: Path = None):
+    def encode_video(self, job_id: int, input_path: Path, output_path: Path, qualities: list[str], delete_original: bool = True, thumbnail_path: Path = None, preview_path: Path = None, sprite_path: Path = None):
         """Lance l'encodage dans un thread séparé."""
-        thread = Thread(target=self._encode_worker, args=(job_id, input_path, output_path, qualities, delete_original, thumbnail_path, preview_path))
+        thread = Thread(target=self._encode_worker, args=(job_id, input_path, output_path, qualities, delete_original, thumbnail_path, preview_path, sprite_path))
         thread.daemon = True
         thread.start()
 
     def _get_video_duration(self, input_path: Path) -> float:
         """Get video duration in seconds using ffprobe."""
         try:
+            # First try container duration
             result = subprocess.run(
                 ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(input_path)],
                 capture_output=True,
                 text=True
             )
-            return float(result.stdout.strip())
+            duration_str = result.stdout.strip()
+            if duration_str and duration_str != 'N/A':
+                return float(duration_str)
+
+            # Fallback to stream duration
+            result = subprocess.run(
+                ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(input_path)],
+                capture_output=True,
+                text=True
+            )
+            duration_str = result.stdout.strip()
+            if duration_str and duration_str != 'N/A':
+                return float(duration_str)
+
+            logger.warning(f"Could not read duration for {input_path}")
+            return 0
         except Exception as e:
-            logger.warning(f"Failed to get video duration: {e}")
+            logger.warning(f"Failed to get video duration for {input_path}: {e}")
             return 0
 
     def _generate_thumbnail(self, input_path: Path, thumbnail_path: Path) -> bool:
@@ -76,6 +92,59 @@ class EncoderService:
             return True
         except Exception as e:
             logger.warning(f"Failed to generate thumbnail: {e}")
+            return False
+
+    def _generate_sprite(self, input_path: Path, sprite_path: Path, interval: int = 10, width: int = 160) -> bool:
+        """Generate a sprite sheet of thumbnails for the entire video at regular intervals.
+        
+        Args:
+            input_path: Path to the source video
+            sprite_path: Path where the sprite sheet should be saved (should end in .jpg or .png)
+            interval: Number of seconds between frames (default 10s)
+            width: Width of each individual thumbnail in the sprite (default 160px)
+        """
+        try:
+            duration = self._get_video_duration(input_path)
+            if duration <= 0:
+                logger.warning(f"Cannot generate sprite: video length 0 or unknown for {input_path.name}")
+                return False
+                
+            sprite_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Calculate grid rows for a 10-column layout based on actual duration.
+            total_frames = int(duration / interval)
+            cols = 10
+            rows = max(1, (total_frames + cols - 1) // cols) # Ceil
+            
+            # tile={cols}x{rows} is critical because if there are more frames than the tile grid, ffmpeg generates multiple sprite files
+            vf_string = f"fps=1/{interval},scale={width}:-1,tile={cols}x{rows}"
+            logger.info(f"Generating Sprite: {vf_string} for {duration} seconds video.")
+            
+            result = subprocess.run(
+                [
+                    "ffmpeg", "-y",
+                    "-i", str(input_path),
+                    "-frames:v", "1000", # cap
+                    "-vf", vf_string,
+                    str(sprite_path)
+                ],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode != 0:
+                logger.error(f"ffmpeg sprite error (code {result.returncode}): {result.stderr}")
+                return False
+
+            if sprite_path.exists() and sprite_path.stat().st_size > 0:
+                logger.info(f"Generated sprite sheet: {sprite_path.name}")
+                return True
+            else:
+                logger.warning("Sprite sheet not created or empty")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to generate sprite sheet: {e}")
             return False
 
     def _generate_preview(self, input_path: Path, preview_path: Path, duration: float = 4.0) -> bool:
@@ -339,7 +408,7 @@ class EncoderService:
             logger.warning(f"Failed to generate thumbnail from HLS: {e}")
             return False
 
-    def _encode_worker(self, job_id: int, input_path: Path, output_path: Path, qualities: list[str], delete_original: bool = True, thumbnail_path: Path = None, preview_path: Path = None):
+    def _encode_worker(self, job_id: int, input_path: Path, output_path: Path, qualities: list[str], delete_original: bool = True, thumbnail_path: Path = None, preview_path: Path = None, sprite_path: Path = None):
         with self.app.app_context():
             job = db.session.get(EncodingJob, job_id)
             if not job:
@@ -358,6 +427,10 @@ class EncoderService:
             # Generate preview video before encoding
             if preview_path:
                 self._generate_preview(input_path, preview_path)
+                
+            # Generate sprite sheet before encoding
+            if sprite_path:
+                self._generate_sprite(input_path, sprite_path)
 
             video = ffmpeg_streaming.input(str(input_path))
             hls = video.hls(Formats.h264())
@@ -374,6 +447,7 @@ class EncoderService:
                     self._progress[job_id] = {"progress": progress, "status": "encoding", "time_left": int(time_left)}
 
             logger.info(f"Starting encoding job {job_id}")
+            # This contains an error inside, investigate later...
             hls.output(str(output_path), monitor=monitor)
 
             with self.app.app_context():

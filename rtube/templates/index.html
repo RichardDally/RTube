@@ -978,6 +978,7 @@
         var filename = '{{ filename }}'
         var mymarkers = JSON.parse('{{ markers | tojson }}');
         var startTime = {{ start_time | default (0) }};
+        var spriteUrl = '{{ sprite_url }}' !== 'None' ? '{{ sprite_url }}' : null;
         {% if video and current_user.is_authenticated %}
         var videoShortId = '{{ video.short_id }}';
         {% else %}
@@ -1308,6 +1309,8 @@
     <script src="{{ url_for('static', filename='node_modules/videojs-hotkeys/videojs.hotkeys.min.js')}}"></script>
     <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js')}}"></script>
     <script src="{{ url_for('static', filename='node_modules/videojs-markers/dist/videojs-markers.min.js')}}"></script>
+    <script
+        src="{{ url_for('static', filename='node_modules/videojs-sprite-thumbnails/dist/videojs-sprite-thumbnails.min.js')}}"></script>
     <script src="{{ url_for('static', filename='js/plugin-test.js')}}" type="text/javascript"></script>
     <script src="{{ url_for('static', filename='js/video-player.js')}}" type="text/javascript"></script>
     <script>
