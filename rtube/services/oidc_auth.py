@@ -70,8 +70,10 @@ def generate_client_secrets(config: OIDCConfig, redirect_uri: str) -> dict[str, 
         Dictionary structure compatible with Flask-OIDC client_secrets.
     """
     try:
+        ca_bundle: str | bool = os.getenv("REQUESTS_CA_BUNDLE", False)
+        logging.info(f"Using CA bundle: {ca_bundle}")
         # Use a short timeout so app startup doesn't hang indefinitely
-        with httpx.Client(timeout=10.0) as client:
+        with httpx.Client(timeout=10.0, verify=ca_bundle) as client:
             response = client.get(config.discovery_url)
             response.raise_for_status()
             discovery_doc = response.json()
