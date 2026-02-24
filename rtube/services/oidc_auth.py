@@ -8,6 +8,7 @@ Supports any OIDC-compliant identity provider (Keycloak, Authentik, Azure AD, Ok
 import json
 import logging
 import os
+import ssl
 import httpx
 from dataclasses import dataclass
 from pathlib import Path
@@ -70,13 +71,28 @@ def generate_client_secrets(config: OIDCConfig, redirect_uri: str) -> dict[str, 
         Dictionary structure compatible with Flask-OIDC client_secrets.
     """
     try:
-        ca_bundle: str | bool = os.getenv("REQUESTS_CA_BUNDLE", False)
-        logging.info(f"Using CA bundle: {ca_bundle}")
+        ca_bundle: str | bool = os.getenv("REQUESTS_CA_BUNDLE", "")
+        
+        if ca_bundle and isinstance(ca_bundle, str) and ca_bundle.lower() not in ("false", "0"):
+            if Path(ca_bundle).exists():
+                logger.info(f"Using CA bundle: {ca_bundle}")
+                verify_ctx = ssl.create_default_context(cafile=ca_bundle)
+            else:
+                logger.warning(f"CA bundle file not found: {ca_bundle}; proceeding with default verification")
+                verify_ctx = True
+        elif ca_bundle and isinstance(ca_bundle, str) and ca_bundle.lower() in ("false", "0"):
+            logger.warning("SSL verification is explicitly disabled via REQUESTS_CA_BUNDLE")
+            verify_ctx = False
+        else:
+            # Default behavior when REQUESTS_CA_BUNDLE is unset or empty
+            verify_ctx = True
+            
         # Use a short timeout so app startup doesn't hang indefinitely
-        with httpx.Client(timeout=10.0, verify=ca_bundle) as client:
+        with httpx.Client(timeout=10.0, verify=verify_ctx) as client:
             response = client.get(config.discovery_url)
             response.raise_for_status()
             discovery_doc = response.json()
+            logger.info(f"OIDC discovery document loaded successfully from {config.discovery_url}")
     except Exception as e:
         logger.error(f"Failed to fetch OIDC discovery document from {config.discovery_url}: {e}")
         raise RuntimeError(f"Could not load OIDC provider configuration: {e}")
@@ -84,12 +100,15 @@ def generate_client_secrets(config: OIDCConfig, redirect_uri: str) -> dict[str, 
     auth_uri = discovery_doc.get("authorization_endpoint")
     token_uri = discovery_doc.get("token_endpoint")
     userinfo_uri = discovery_doc.get("userinfo_endpoint")
+    introspection_uri = discovery_doc.get("introspection_endpoint")
     issuer = discovery_doc.get("issuer")
 
     if not all([auth_uri, token_uri, userinfo_uri, issuer]):
         logger.warning("Discovery document is missing required endpoints. OIDC login may fail.")
+    if not introspection_uri:
+        logger.warning("Discovery document is missing 'introspection_endpoint'. Token validation may fail.")
 
-    return {
+    secrets = {
         "web": {
             "client_id": config.client_id,
             "client_secret": config.client_secret,
@@ -100,6 +119,11 @@ def generate_client_secrets(config: OIDCConfig, redirect_uri: str) -> dict[str, 
             "redirect_uris": [redirect_uri],
         }
     }
+    
+    if introspection_uri:
+        secrets["web"]["token_introspection_uri"] = introspection_uri
+        
+    return secrets
 
 
 def write_client_secrets_file(config: OIDCConfig, instance_path: str, redirect_uri: str) -> str:
