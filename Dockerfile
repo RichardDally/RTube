@@ -4,7 +4,7 @@
 FROM ubuntu:26.04 AS builder
 
 ARG USERNAME=richard
-ARG PYTHON_VERSION=3.14
+ARG PYTHON_VERSION=3.13
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PATH="/home/${USERNAME}/.local/bin:/home/${USERNAME}/venv/bin:$PATH" \
