@@ -5,14 +5,9 @@ Provides OIDC authentication as an alternative to local authentication.
 Supports any OIDC-compliant identity provider (Keycloak, Authentik, Azure AD, Okta, etc.).
 """
 
-import json
 import logging
 import os
-import ssl
-import httpx
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -60,125 +55,37 @@ class OIDCConfig:
         )
 
 
-def generate_client_secrets(config: OIDCConfig, redirect_uri: str) -> dict[str, Any]:
-    """Generate the client_secrets.json structure for Flask-OIDC.
-
-    Args:
-        config: OIDC configuration.
-        redirect_uri: The redirect URI for the OIDC callback.
-
-    Returns:
-        Dictionary structure compatible with Flask-OIDC client_secrets.
-    """
-    try:
-        ca_bundle: str | bool = os.getenv("REQUESTS_CA_BUNDLE", "")
-        
-        if ca_bundle and isinstance(ca_bundle, str) and ca_bundle.lower() not in ("false", "0"):
-            if Path(ca_bundle).exists():
-                logger.info(f"Using CA bundle: {ca_bundle}")
-                verify_ctx = ssl.create_default_context(cafile=ca_bundle)
-            else:
-                logger.warning(f"CA bundle file not found: {ca_bundle}; proceeding with default verification")
-                verify_ctx = True
-        elif ca_bundle and isinstance(ca_bundle, str) and ca_bundle.lower() in ("false", "0"):
-            logger.warning("SSL verification is explicitly disabled via REQUESTS_CA_BUNDLE")
-            verify_ctx = False
-        else:
-            # Default behavior when REQUESTS_CA_BUNDLE is unset or empty
-            verify_ctx = True
-            
-        # Use a short timeout so app startup doesn't hang indefinitely
-        with httpx.Client(timeout=10.0, verify=verify_ctx) as client:
-            response = client.get(config.discovery_url)
-            response.raise_for_status()
-            discovery_doc = response.json()
-            logger.info(f"OIDC discovery document loaded successfully from {config.discovery_url}")
-    except Exception as e:
-        logger.error(f"Failed to fetch OIDC discovery document from {config.discovery_url}: {e}")
-        raise RuntimeError(f"Could not load OIDC provider configuration: {e}")
-
-    auth_uri = discovery_doc.get("authorization_endpoint")
-    token_uri = discovery_doc.get("token_endpoint")
-    userinfo_uri = discovery_doc.get("userinfo_endpoint")
-    introspection_uri = discovery_doc.get("introspection_endpoint")
-    issuer = discovery_doc.get("issuer")
-
-    if not all([auth_uri, token_uri, userinfo_uri, issuer]):
-        logger.warning("Discovery document is missing required endpoints. OIDC login may fail.")
-    if not introspection_uri:
-        logger.warning("Discovery document is missing 'introspection_endpoint'. Token validation may fail.")
-
-    secrets = {
-        "web": {
-            "client_id": config.client_id,
-            "client_secret": config.client_secret,
-            "auth_uri": auth_uri,
-            "token_uri": token_uri,
-            "userinfo_uri": userinfo_uri,
-            "issuer": issuer,
-            "redirect_uris": [redirect_uri],
-        }
-    }
-    
-    if introspection_uri:
-        secrets["web"]["token_introspection_uri"] = introspection_uri
-        
-    return secrets
-
-
-def write_client_secrets_file(config: OIDCConfig, instance_path: str, redirect_uri: str) -> str:
-    """Write the client_secrets.json file for Flask-OIDC.
-
-    Args:
-        config: OIDC configuration.
-        instance_path: Flask instance path.
-        redirect_uri: The redirect URI for the OIDC callback.
-
-    Returns:
-        Path to the generated client_secrets.json file.
-    """
-    secrets = generate_client_secrets(config, redirect_uri)
-    secrets_path = Path(instance_path) / "client_secrets.json"
-    secrets_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(secrets_path, "w") as f:
-        json.dump(secrets, f, indent=2)
-
-    logger.info(f"OIDC client secrets written to {secrets_path}")
-    return str(secrets_path)
-
-
 def configure_flask_oidc(app, config: OIDCConfig) -> None:
-    """Configure Flask-OIDC for the application.
+    """Configure Authlib OAuth for the application.
 
     Args:
         app: Flask application instance.
         config: OIDC configuration.
     """
-    from flask_oidc import OpenIDConnect
+    from authlib.integrations.flask_client import OAuth
 
-    # Generate redirect URI
-    # Note: This will be updated when the app context is available
-    redirect_uri = os.environ.get(
-        "RTUBE_OIDC_REDIRECT_URI",
-        "http://127.0.0.1:5000/auth/oidc/callback"
-    )
+    # We need a proper secret key for session management, required by Authlib
+    app.config.setdefault("SECRET_KEY", "dev-secret-key" if app.config.get("TESTING") else None)
 
-    # Write client secrets file
-    secrets_path = write_client_secrets_file(config, app.instance_path, redirect_uri)
-
-    # Configure Flask-OIDC
-    app.config["OIDC_CLIENT_SECRETS"] = secrets_path
-    app.config["OIDC_SCOPES"] = config.scopes
-    app.config["OIDC_INTROSPECTION_AUTH_METHOD"] = "client_secret_post"
-    app.config["OIDC_TOKEN_TYPE_HINT"] = "access_token"
-
+    oauth = OAuth(app)
+    
     # Store config for later use
     app.config["OIDC_CONFIG"] = config
     app.config["OIDC_ENABLED"] = True
 
-    # Initialize Flask-OIDC
-    oidc = OpenIDConnect(app)
-    app.config["OIDC_INSTANCE"] = oidc
+    client_kwargs = {
+        'scope': ' '.join(config.scopes),
+    }
 
-    logger.info("Flask-OIDC configured successfully")
+    # Register OIDC client
+    oauth.register(
+        name='oidc',
+        client_id=config.client_id,
+        client_secret=config.client_secret,
+        server_metadata_url=config.discovery_url,
+        client_kwargs=client_kwargs,
+    )
+    
+    app.config["OAUTH_INSTANCE"] = oauth
+    app.config["OIDC_INSTANCE"] = oauth.oidc
+    logger.info("Authlib OIDC configured successfully")

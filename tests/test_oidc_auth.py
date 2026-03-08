@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import patch, MagicMock
-import httpx
-
-from rtube.services.oidc_auth import generate_client_secrets, OIDCConfig
+from rtube.services.oidc_auth import configure_flask_oidc, OIDCConfig
+from rtube.models_auth import User
+import authlib.integrations.flask_client
 
 @pytest.fixture
 def mock_oidc_config():
@@ -15,62 +15,77 @@ def mock_oidc_config():
         username_claim="preferred_username"
     )
 
-def test_generate_client_secrets_success(mock_oidc_config):
-    discovery_doc = {
-        "authorization_endpoint": "https://example.com/auth",
-        "token_endpoint": "https://example.com/token",
-        "userinfo_endpoint": "https://example.com/userinfo",
-        "introspection_endpoint": "https://example.com/introspect",
-        "issuer": "https://example.com"
-    }
-
-    with patch("rtube.services.oidc_auth.httpx.Client") as mock_client_class:
-        mock_client_instance = mock_client_class.return_value.__enter__.return_value
-        mock_response = MagicMock()
-        mock_response.json.return_value = discovery_doc
-        mock_response.raise_for_status.return_value = None
-        mock_client_instance.get.return_value = mock_response
-
-        secrets = generate_client_secrets(mock_oidc_config, "http://localhost/callback")
-
-        mock_client_instance.get.assert_called_once_with("https://example.com/.well-known/openid-configuration")
+def test_configure_flask_oidc_registers_authlib(app, mock_oidc_config):
+    """Test that Authlib is properly configured and attached to the app."""
+    with patch("authlib.integrations.flask_client.OAuth") as mock_oauth_class:
+        mock_oauth_instance = mock_oauth_class.return_value
         
-        assert secrets == {
-            "web": {
-                "client_id": "test_client_id",
-                "client_secret": "test_client_secret",
-                "auth_uri": "https://example.com/auth",
-                "token_uri": "https://example.com/token",
-                "userinfo_uri": "https://example.com/userinfo",
-                "token_introspection_uri": "https://example.com/introspect",
-                "issuer": "https://example.com",
-                "redirect_uris": ["http://localhost/callback"],
-            }
+        configure_flask_oidc(app, mock_oidc_config)
+        
+        mock_oauth_class.assert_called_once_with(app)
+        mock_oauth_instance.register.assert_called_once_with(
+            name='oidc',
+            client_id="test_client_id",
+            client_secret="test_client_secret",
+            server_metadata_url="https://example.com/.well-known/openid-configuration",
+            client_kwargs={'scope': 'openid profile email'}
+        )
+        assert app.config["OIDC_CONFIG"] == mock_oidc_config
+        assert app.config["OIDC_ENABLED"] is True
+        assert app.config["OAUTH_INSTANCE"] == mock_oauth_instance
+
+def test_oidc_login_redirects_to_provider(client, app, mock_oidc_config):
+    """Test that /auth/oidc/login redirects to the OIDC provider."""
+    configure_flask_oidc(app, mock_oidc_config)
+    
+    with patch.object(app.config["OAUTH_INSTANCE"].oidc, 'authorize_redirect') as mock_redirect:
+        mock_redirect.return_value = "redirect_in_progress"
+        
+        response = client.get('/auth/oidc/login')
+        
+        mock_redirect.assert_called_once()
+        # Since it returns our string literal mock
+        assert response.status_code == 200
+
+def test_oidc_login_safe_next_url(client, app, mock_oidc_config):
+    """Test that /auth/oidc/login only stores safe relative URLs."""
+    configure_flask_oidc(app, mock_oidc_config)
+    
+    with patch.object(app.config["OAUTH_INSTANCE"].oidc, 'authorize_redirect'):
+        with client.session_transaction() as sess:
+            sess.clear()
+        client.get('/auth/oidc/login?next=/some/valid/path')
+        with client.session_transaction() as sess:
+            assert sess.get('oidc_next') == '/some/valid/path'
+            
+        with client.session_transaction() as sess:
+            sess.clear()
+        client.get('/auth/oidc/login?next=http://malicious.com/')
+        with client.session_transaction() as sess:
+            assert 'oidc_next' not in sess
+
+def test_oidc_callback_success_new_user(client, app, mock_oidc_config):
+    """Test successful OIDC callback creating a new user with sanitized username."""
+    configure_flask_oidc(app, mock_oidc_config)
+    
+    mock_token = {
+        'userinfo': {
+            'sub': '123456789',
+            'preferred_username': 'test.user@example.com',
+            'email': 'test.user@example.com'
         }
-
-def test_generate_client_secrets_missing_endpoints(mock_oidc_config, caplog):
-    discovery_doc = {
-        "userinfo_endpoint": "https://example.com/userinfo",
-        "issuer": "https://example.com"
     }
-
-    with patch("rtube.services.oidc_auth.httpx.Client") as mock_client_class:
-        mock_client_instance = mock_client_class.return_value.__enter__.return_value
-        mock_response = MagicMock()
-        mock_response.json.return_value = discovery_doc
-        mock_response.raise_for_status.return_value = None
-        mock_client_instance.get.return_value = mock_response
-
-        secrets = generate_client_secrets(mock_oidc_config, "http://localhost/callback")
-
-        assert secrets["web"]["auth_uri"] is None
-        assert secrets["web"]["token_uri"] is None
-        assert "Discovery document is missing required endpoints" in caplog.text
-
-def test_generate_client_secrets_http_error(mock_oidc_config):
-    with patch("rtube.services.oidc_auth.httpx.Client") as mock_client_class:
-        mock_client_instance = mock_client_class.return_value.__enter__.return_value
-        mock_client_instance.get.side_effect = httpx.HTTPError("Network error")
-
-        with pytest.raises(RuntimeError, match="Could not load OIDC provider configuration"):
-            generate_client_secrets(mock_oidc_config, "http://localhost/callback")
+    
+    with patch.object(app.config["OAUTH_INSTANCE"].oidc, 'authorize_access_token', return_value=mock_token):
+        response = client.get('/auth/oidc/callback')
+        
+        # Should redirect to index upon successful login
+        assert response.status_code == 302
+        assert response.headers['Location'] == '/'
+        
+        # Verify user was created properly
+        with app.app_context():
+            user = User.query.filter_by(username='test_user').first()
+            assert user is not None
+            assert user.auth_type == 'sso'
+            assert user.role == 'viewer'

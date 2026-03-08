@@ -24,18 +24,22 @@ def oidc_login():
         flash("OIDC authentication is not configured.", "error")
         return redirect(url_for('auth.login'))
 
-    oidc = current_app.config.get("OIDC_INSTANCE")
-    if not oidc:
+    oauth = current_app.config.get("OAUTH_INSTANCE")
+    if not oauth or not oauth.oidc:
         flash("OIDC authentication is not configured.", "error")
         return redirect(url_for('auth.login'))
 
-    # Store next URL if provided
+    # Store next URL if provided. Only store safe (relative) URLs to prevent open redirects.
     next_page = request.args.get('next')
     if next_page:
-        session['oidc_next'] = next_page
+        from urllib.parse import urlparse
+        parsed = urlparse(next_page)
+        if not parsed.netloc and parsed.path:
+            session['oidc_next'] = next_page
 
     # Redirect to OIDC provider
-    return redirect(url_for('auth.oidc_callback'))
+    redirect_uri = url_for('auth.oidc_callback', _external=True)
+    return oauth.oidc.authorize_redirect(redirect_uri)
 
 
 @auth_bp.route('/oidc/callback')
@@ -46,21 +50,22 @@ def oidc_callback():
         flash("OIDC authentication is not configured.", "error")
         return redirect(url_for('auth.login'))
 
-    oidc = current_app.config.get("OIDC_INSTANCE")
+    oauth = current_app.config.get("OAUTH_INSTANCE")
     oidc_config = current_app.config.get("OIDC_CONFIG")
 
-    if not oidc or not oidc_config:
+    if not oauth or not oauth.oidc or not oidc_config:
         flash("OIDC authentication is not configured.", "error")
         return redirect(url_for('auth.login'))
 
     try:
-        # Check if user is authenticated via OIDC
-        if not oidc.user_loggedin:
-            # Trigger OIDC login
-            return oidc.redirect_to_auth_server(url_for('auth.oidc_callback', _external=True))
-
+        # Get token from OIDC provider
+        token = oauth.oidc.authorize_access_token()
+        
         # Get user info from OIDC
-        user_info = oidc.user_getinfo(['sub', 'preferred_username', 'email', 'name'])
+        user_info = token.get('userinfo')
+        if not user_info:
+            flash("SSO authentication failed: missing user information.", "error")
+            return redirect(url_for('auth.login'))
 
         sub = user_info.get('sub')
         username = user_info.get(oidc_config.username_claim) or user_info.get('preferred_username') or user_info.get('email')
@@ -70,23 +75,44 @@ def oidc_callback():
             flash("SSO authentication failed: missing user information.", "error")
             return redirect(url_for('auth.login'))
 
-        # Clean username (remove email domain if present)
+        # Clean username (remove email domain if present, replace invalid characters)
+        import re
         if '@' in username:
             username = username.split('@')[0]
+        # Ensure alphanumeric characters only (replace other chars with underscores)
+        username = re.sub(r'[^a-zA-Z0-9_]', '_', username)
+        
+        # Trim to max length and ensure minimum length
+        username = username[:30]
+        if len(username) < 3:
+            username = f"{username}_user"
+            while len(username) < 3:
+                username += "0"
 
         # Find or create user
+        # In a robust implementation, we might link 'sub' to a table column,
+        # but for this iteration, we map by username.
         user = User.query.filter_by(username=username).first()
 
         if not user:
+            # If a local user with this exact username already exists or collision happens:
+            # Append random hex until we find an available username
+            original_username = username
+            import secrets
+            while User.query.filter_by(username=username).first():
+                suffix = secrets.token_hex(2)
+                username = f"{original_username[:25]}_{suffix}"
+            
             # Create new user
             user = User(
                 username=username,
                 role=UserRole.VIEWER.value,
+                auth_type='sso'
             )
             # Set a random password (user won't use it, they'll use OIDC)
-            import secrets
             user.set_password(secrets.token_urlsafe(32))
             db.session.add(user)
+            db.session.commit()
             current_app.logger.info(f"Auto-created OIDC user '{username}' (sub: {sub})")
 
         user.last_login = datetime.utcnow()
@@ -104,6 +130,7 @@ def oidc_callback():
         current_app.logger.error(f"OIDC callback processing failed: {e}")
         flash("SSO authentication failed. Please try again.", "error")
         return redirect(url_for('auth.login'))
+
 
 
 # =============================================================================

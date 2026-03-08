@@ -255,14 +255,14 @@ export RTUBE_OIDC_USERNAME_CLAIM="preferred_username"
 1. User clicks "Sign in with SSO (OIDC)" on the login page
 2. User is redirected to the Identity Provider (IdP)
 3. After successful authentication, IdP redirects back to RTube
-4. RTube creates a local user account on first login (with `uploader` role)
+4. RTube creates a local user account on first login (with `viewer` role)
 5. User is logged in
 
 OIDC users can also use local credentials if they have a local account.
 
 #### Custom CA Certificate
 
-If your OIDC provider uses a self-signed certificate or a certificate signed by a private CA, you need to configure RTube to trust it. Flask-OIDC uses Python's `requests` library, which respects standard environment variables for CA certificates:
+If your OIDC provider uses a self-signed certificate or a certificate signed by a private CA, you need to configure RTube to trust it. Authlib uses standard HTTP libraries under the hood, which respect standard environment variables for CA certificates:
 
 ```bash
 export REQUESTS_CA_BUNDLE=/path/to/custom-ca-bundle.pem
