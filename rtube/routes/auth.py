@@ -31,11 +31,8 @@ def oidc_login():
 
     # Store next URL if provided. Only store safe (relative) URLs to prevent open redirects.
     next_page = request.args.get('next')
-    if next_page:
-        from urllib.parse import urlparse
-        parsed = urlparse(next_page)
-        if not parsed.netloc and parsed.path:
-            session['oidc_next'] = next_page
+    if next_page and next_page.startswith('/') and not next_page.startswith('//'):
+        session['oidc_next'] = next_page
 
     # Redirect to OIDC provider
     redirect_uri = url_for('auth.oidc_callback', _external=True)
@@ -89,31 +86,42 @@ def oidc_callback():
             while len(username) < 3:
                 username += "0"
 
-        # Find or create user
-        # In a robust implementation, we might link 'sub' to a table column,
-        # but for this iteration, we map by username.
-        user = User.query.filter_by(username=username).first()
+        # Find user by sub first (most secure & reliable)
+        user = User.query.filter_by(sso_subject=sub).first()
 
         if not user:
-            # If a local user with this exact username already exists or collision happens:
-            # Append random hex until we find an available username
-            original_username = username
-            import secrets
-            while User.query.filter_by(username=username).first():
-                suffix = secrets.token_hex(2)
-                username = f"{original_username[:25]}_{suffix}"
-            
-            # Create new user
-            user = User(
-                username=username,
-                role=UserRole.VIEWER.value,
-                auth_type='sso'
-            )
-            # Set a random password (user won't use it, they'll use OIDC)
-            user.set_password(secrets.token_urlsafe(32))
-            db.session.add(user)
-            db.session.commit()
-            current_app.logger.info(f"Auto-created OIDC user '{username}' (sub: {sub})")
+            # Fallback to username check (for legacy SSO users without a sub, or new users)
+            user_by_name = User.query.filter_by(username=username).first()
+
+            if user_by_name:
+                if user_by_name.auth_type == 'sso':
+                    # Upgrade legacy SSO user to use sso_subject
+                    user = user_by_name
+                    user.sso_subject = sub
+                else:
+                    # COLLISION: This username matches a local user (like 'admin')!
+                    # We must append a unique suffix to avoid Account Takeover.
+                    original_username = username
+                    import secrets
+                    while User.query.filter_by(username=username).first():
+                        suffix = secrets.token_hex(2)
+                        username = f"{original_username[:25]}_{suffix}"
+
+            # If user is STILL not found (either no collision, or we resolved collision)
+            if not user:
+                import secrets
+                # Create new SSO user
+                user = User(
+                    username=username,
+                    role=UserRole.VIEWER.value,
+                    auth_type='sso',
+                    sso_subject=sub
+                )
+                # Set a random password (user won't use it, they'll use OIDC)
+                user.set_password(secrets.token_urlsafe(32))
+                db.session.add(user)
+                db.session.commit()
+                current_app.logger.info(f"Auto-created OIDC user '{username}' (sub: {sub})")
 
         user.last_login = datetime.utcnow()
         db.session.commit()

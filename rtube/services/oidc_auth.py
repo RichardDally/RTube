@@ -65,7 +65,11 @@ def configure_flask_oidc(app, config: OIDCConfig) -> None:
     from authlib.integrations.flask_client import OAuth
 
     # We need a proper secret key for session management, required by Authlib
-    app.config.setdefault("SECRET_KEY", "dev-secret-key" if app.config.get("TESTING") else None)
+    if not app.config.get("SECRET_KEY"):
+        if app.config.get("TESTING"):
+            app.config["SECRET_KEY"] = "dev-secret-key"
+        else:
+            raise RuntimeError("A SECRET_KEY must be configured to use OIDC authentication.")
 
     oauth = OAuth(app)
     
